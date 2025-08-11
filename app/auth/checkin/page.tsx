@@ -14,6 +14,7 @@ import {
 import { Input } from '../../temaEscuro/input'
 import { Button } from '@/components/ui/button'
 
+
 type Credenciado = {
   id: string
   nome: string
@@ -121,9 +122,8 @@ export default function CheckInPage() {
 
         {mensagem && (
           <p
-            className={`mt-2 text-center ${
-              mensagem.includes('Erro') ? 'text-red-500' : 'text-green-600'
-            }`}
+            className={`mt-2 text-center ${mensagem.includes('Erro') ? 'text-red-500' : 'text-green-600'
+              }`}
           >
             {mensagem}
           </p>
@@ -150,8 +150,8 @@ export default function CheckInPage() {
               {credenciado.tipoPessoa === 'pessoaFisica'
                 ? 'Pessoa Física'
                 : credenciado.tipoPessoa === 'empresa'
-                ? 'Empresa'
-                : 'Colaborador'}
+                  ? 'Empresa'
+                  : 'Colaborador'}
             </p>
 
             <Button
