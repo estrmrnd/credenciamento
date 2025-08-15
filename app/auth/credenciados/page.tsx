@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { auth, db } from '../../../lib/firebase'
 import { collection, getDocs, Timestamp } from 'firebase/firestore'
 import { Card } from '../../../src/components/card'
 import router from 'next/router'
 import { signOut } from 'firebase/auth'
+import { useReactToPrint } from 'react-to-print'
+import CredencialPrint from '@/app/credencialPrint'
+import { Button } from '@/components/ui/button'
+import { Printer } from 'lucide-react'
 
 import {
   Select,
@@ -23,7 +27,8 @@ type Credenciado = {
   empresa: string
   telefone: string
   qtdColaboradores: string
-  dataCredenciamento?: string // ISO string gerada a partir do createdAt do Firestore
+  dataCredenciamento?: string
+  checkInAt?: string // <-- adicionado
 }
 
 export default function CredenciadosPage() {
@@ -33,27 +38,37 @@ export default function CredenciadosPage() {
   const [ordenacao, setOrdenacao] = useState<'asc' | 'desc'>('asc')
   const [itensPorPagina, setItensPorPagina] = useState(10)
   const [paginaAtual, setPaginaAtual] = useState(1)
+  const [selecionado, setSelecionado] = useState<Credenciado | null>(null)
 
+  const printRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+  });
+  
   useEffect(() => {
     const fetchCredenciados = async () => {
       const snapshot = await getDocs(collection(db, 'credenciados'))
       const lista: Credenciado[] = []
       snapshot.forEach((doc) => {
         const data = doc.data() as any
-
-        const createdAtFormatted = data.createdAt instanceof Timestamp
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt || ''
-
-        lista.push({
-          id: doc.id,
-          ...data,
-          dataCredenciamento: createdAtFormatted,
-        })
+        const createdAtFormatted =
+          data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt || ''
+        const checkInFormatted =
+          data.checkInAt instanceof Timestamp
+            ? data.checkInAt.toDate().toISOString()
+            : data.checkInAt || ''
+            lista.push({
+              id: doc.id,
+              ...data,
+              dataCredenciamento: createdAtFormatted,
+              checkInAt: data.checkInAt ? data.checkInAt.toDate() : null
+            })
       })
       setDados(lista)
     }
-
     fetchCredenciados()
   }, [])
 
@@ -72,9 +87,8 @@ export default function CredenciadosPage() {
         item.nome.toLowerCase().includes(texto) ||
         item.email.toLowerCase().includes(texto) ||
         item.empresa.toLowerCase().includes(texto)
-
-      const empresaMatch = filtroEmpresa === 'all' ? true : item.empresa === filtroEmpresa
-
+      const empresaMatch =
+        filtroEmpresa === 'all' ? true : item.empresa === filtroEmpresa
       return textoMatch && empresaMatch
     })
   }, [dados, filtroTexto, filtroEmpresa])
@@ -164,22 +178,41 @@ export default function CredenciadosPage() {
       </div>
 
       {paginaDados.length === 0 ? (
-        <p className="text-center text-gray-500 dark:text-gray-400">Nenhum credenciado encontrado.</p>
+        <p className="text-center text-gray-500 dark:text-gray-400">
+          Nenhum credenciado encontrado.
+        </p>
       ) : (
         <div className="space-y-4">
           {paginaDados.map((item) => (
-            <Card key={item.id} className="p-4">
-              <p><strong>Nome:</strong> {item.nome}</p>
-              <p><strong>Email:</strong> {item.email}</p>
-              <p><strong>CPF:</strong> {item.cpf}</p>
-              <p><strong>Empresa:</strong> {item.empresa}</p>
-              <p><strong>Colaboradores:</strong> {item.qtdColaboradores}</p>
-              <p><strong>Telefone:</strong> {item.telefone}</p>
-              {item.dataCredenciamento ? (
-                <p><strong>Data Credenciamento:</strong> {new Date(item.dataCredenciamento).toLocaleDateString()}</p>
-              ) : (
-                <p><em>Data não disponível</em></p>
-              )}
+            <Card key={item.id} className="p-4 flex justify-between items-center">
+              <div>
+                <p><strong>Nome:</strong> {item.nome}</p>
+                <p><strong>Email:</strong> {item.email}</p>
+                <p><strong>CPF:</strong> {item.cpf}</p>
+                <p><strong>Empresa:</strong> {item.empresa}</p>
+                <p><strong>Colaboradores:</strong> {item.qtdColaboradores}</p>
+                <p><strong>Telefone:</strong> {item.telefone}</p>
+                {item.dataCredenciamento ? (
+                  <p><strong>Data Credenciamento:</strong> {new Date(item.dataCredenciamento).toLocaleDateString()}</p>
+                ) : (
+                  <p><em>Data não disponível</em></p>
+                )}
+                {item.checkInAt ? (
+                  <p><strong>Check-in:</strong> {new Date(item.checkInAt).toLocaleString()}</p>
+                ) : (
+                  <p><em>Sem check-in</em></p>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setSelecionado(item)
+                  setTimeout(() => handlePrint(), 100)
+                }}
+              >
+                <Printer className="h-5 w-5" />
+              </Button>
             </Card>
           ))}
         </div>
@@ -206,6 +239,18 @@ export default function CredenciadosPage() {
           </button>
         </div>
       )}
+
+      {/* crachá oculto para impressão */}
+      <div style={{ display: 'none' }}>
+        <div ref={printRef}>
+          {selecionado && (
+            <CredencialPrint
+              nome={selecionado.nome}
+              empresa={selecionado.empresa}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
