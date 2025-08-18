@@ -1,12 +1,21 @@
 'use client'
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Swal from "sweetalert2"
 import { onAuthStateChanged, type User } from "firebase/auth"
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc } from "firebase/firestore"
-import { auth, db } from "../../../lib/firebase"
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  updateDoc,
+  writeBatch
+} from "firebase/firestore"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import Swal from "sweetalert2"
 import * as XLSX from "xlsx"
+import { auth, db } from "../../../lib/firebase"
 
 type Credenciado = {
   id: string
@@ -24,9 +33,37 @@ export default function AdminPage() {
   const [credenciados, setCredenciados] = useState<Credenciado[]>([])
   const [previewData, setPreviewData] = useState<Credenciado[]>([])
   const [editingCredenciado, setEditingCredenciado] = useState<Credenciado | null>(null)
+
+  // flags de UX
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   const router = useRouter()
 
-  {/* verificar usuario */}
+  // -------- carregar credenciados --------
+  const loadCredenciados = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "credenciados"))
+      const list: Credenciado[] = querySnapshot.docs.map((d) => {
+        const data = d.data() as Partial<Credenciado>
+        return {
+          id: d.id,
+          nome: data.nome || "Sem nome",
+          email: data.email || "Sem email",
+          cpf: data.cpf,
+          telefone: data.telefone,
+          tipoPessoa: data.tipoPessoa,
+        }
+      })
+      setCredenciados(list)
+    } catch (error) {
+      console.error("Erro ao carregar credenciados:", error)
+      Swal.fire("Erro", "Não foi possível carregar os credenciados", "error")
+    }
+  }, [])
+
+  // -------- verificar usuário/admin --------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
@@ -35,17 +72,23 @@ export default function AdminPage() {
         return
       }
       setUser(currentUser)
+
       try {
         const docRef = doc(db, "users", currentUser.uid)
         const docSnap = await getDoc(docRef)
+
         if (!docSnap.exists()) {
           setLoading(false)
           Swal.fire("Acesso negado", "Você não tem permissão para acessar esta página", "error")
           router.push("/auth/sem-acesso")
           return
         }
+
         const data = docSnap.data()
-        if (data.isAdmin === true || data.isAdmin === "true") {
+        // Ideal: guardar isAdmin como boolean no Firestore
+        const adminFlag = !!data?.isAdmin
+
+        if (adminFlag) {
           setIsAdmin(true)
           await loadCredenciados()
         } else {
@@ -62,32 +105,11 @@ export default function AdminPage() {
         setLoading(false)
       }
     })
+
     return () => unsubscribe()
-  }, [router])
+  }, [router, loadCredenciados])
 
-  {/* carregar credenciado */}
-  async function loadCredenciados() {
-    try {
-      const querySnapshot = await getDocs(collection(db, "credenciados"))
-      const list: Credenciado[] = querySnapshot.docs.map((doc) => {
-        const data = doc.data() as Partial<Credenciado>
-        return {
-          id: doc.id,
-          nome: data.nome || "Sem nome",
-          email: data.email || "Sem email",
-          cpf: data.cpf,
-          telefone: data.telefone,
-          tipoPessoa: data.tipoPessoa
-        }
-      })
-      setCredenciados(list)
-    } catch (error) {
-      console.error("Erro ao carregar credenciados:", error)
-      Swal.fire("Erro", "Não foi possível carregar os credenciados", "error")
-    }
-  }
-
-  {/* exportar */}
+  // -------- exportar CSV --------
   function exportCSV() {
     if (credenciados.length === 0) {
       Swal.fire("Aviso", "Nenhum credenciado para exportar", "info")
@@ -95,11 +117,14 @@ export default function AdminPage() {
     }
     const headers = ["Nome", "Email", "CPF", "Telefone", "TipoPessoa"]
     const rows = credenciados.map((c) => [
-      c.nome, c.email, c.cpf || "", c.telefone || "", c.tipoPessoa || ""
+      c.nome,
+      c.email,
+      c.cpf || "",
+      c.telefone || "",
+      c.tipoPessoa || "",
     ])
-    let csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers, ...rows].map((e) => e.join(",")).join("\n")
+    const csv = [headers, ...rows].map((e) => e.join(",")).join("\n")
+    const csvContent = "data:text/csv;charset=utf-8," + csv
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
@@ -109,24 +134,36 @@ export default function AdminPage() {
     document.body.removeChild(link)
   }
 
-  {/* remover credenciado */}
-  function handleDelete(id: string) {
-    Swal.fire({
+  // -------- remover credenciado (Apaga do Firestore) --------
+  async function handleDelete(id: string) {
+    const result = await Swal.fire({
       title: "Tem certeza?",
-      text: "Isso remove da lista, mas não apaga do banco de dados.",
+      text: "Isso irá APAGAR o registro do banco de dados.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Sim, remover",
+      confirmButtonText: "Sim, apagar",
       cancelButtonText: "Cancelar",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setCredenciados((prev) => prev.filter((c) => c.id !== id))
-        Swal.fire("Removido!", "O credenciado foi removido da lista.", "success")
-      }
     })
+    if (!result.isConfirmed) return
+
+    try {
+      setDeletingId(id)
+      await deleteDoc(doc(db, "credenciados", id))
+      setCredenciados((prev) => prev.filter((c) => c.id !== id))
+      Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success")
+    } catch (error: any) {
+      if (error?.code === "permission-denied") {
+        Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning")
+      } else {
+        console.error("Erro ao remover:", error)
+        Swal.fire("Erro", "Não foi possível remover o credenciado", "error")
+      }
+    } finally {
+      setDeletingId(null)
+    }
   }
 
-  {/* editar credenciado */}
+  // -------- editar credenciado --------
   function openEditModal(c: Credenciado) {
     setEditingCredenciado(c)
   }
@@ -140,17 +177,20 @@ export default function AdminPage() {
     if (!editingCredenciado) return
     const { id, ...data } = editingCredenciado
     try {
-      await updateDoc(doc(db, "credenciados", id), data)
+      setSavingEdit(true)
+      await updateDoc(doc(db, "credenciados", id), data as Partial<Omit<Credenciado, "id">>)
       Swal.fire("Sucesso", "Credenciado atualizado com sucesso!", "success")
       setEditingCredenciado(null)
       await loadCredenciados()
     } catch (error) {
       console.error("Erro ao atualizar:", error)
       Swal.fire("Erro", "Não foi possível atualizar o credenciado", "error")
+    } finally {
+      setSavingEdit(false)
     }
   }
 
-  {/* preview da importação via excel */}
+  // -------- importar Excel (pré-visualização + confirmar) --------
   async function handleImportExcel(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -161,8 +201,8 @@ export default function AdminPage() {
       const worksheet = workbook.Sheets[sheetName]
       const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet)
       const preview: Credenciado[] = jsonData
-        .filter(item => item.Nome && item.Email)
-        .map(item => ({
+        .filter((item) => item.Nome && item.Email)
+        .map((item) => ({
           id: "",
           nome: item.Nome,
           email: item.Email,
@@ -183,26 +223,35 @@ export default function AdminPage() {
       return
     }
     try {
+      setImporting(true)
+      const batch = writeBatch(db)
+      const col = collection(db, "credenciados")
+
       for (const item of previewData) {
-        await addDoc(collection(db, "credenciados"), {
+        const ref = doc(col)
+        batch.set(ref, {
           nome: item.nome,
           email: item.email,
-          cpf: item.cpf,
-          telefone: item.telefone,
-          tipoPessoa: item.tipoPessoa,
-          createdAt: new Date()
+          cpf: item.cpf ?? "",
+          telefone: item.telefone ?? "",
+          tipoPessoa: item.tipoPessoa ?? "pessoaFisica",
+          createdAt: serverTimestamp(),
         })
       }
+
+      await batch.commit()
       Swal.fire("Sucesso", "Credenciados importados com sucesso!", "success")
       setPreviewData([])
       await loadCredenciados()
     } catch (error) {
       console.error("Erro ao importar dados:", error)
       Swal.fire("Erro", "Não foi possível importar os dados", "error")
+    } finally {
+      setImporting(false)
     }
   }
 
-  {/* render */}
+  // -------- render --------
   if (loading) return <p>Carregando...</p>
   if (!isAdmin) return <p>Acesso negado</p>
 
@@ -210,11 +259,12 @@ export default function AdminPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Painel do Administrador</h1>
 
-      {/* botao de importar e exportar csv */}
+      {/* botões importar/exportar */}
       <div className="flex gap-4 mb-6">
         <button
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60"
           onClick={exportCSV}
+          disabled={credenciados.length === 0}
         >
           Exportar CSV
         </button>
@@ -226,7 +276,7 @@ export default function AdminPage() {
         />
       </div>
 
-      {/* pre-visu da importação csv */}
+      {/* pré-visualização importação */}
       {previewData.length > 0 && (
         <div className="mb-6 border p-4 rounded bg-gray-50">
           <h3 className="font-semibold mb-2">Pré-visualização da importação</h3>
@@ -253,15 +303,16 @@ export default function AdminPage() {
             </tbody>
           </table>
           <button
-            className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-60"
             onClick={confirmImport}
+            disabled={importing}
           >
-            Confirmar Importação
+            {importing ? "Importando..." : "Confirmar Importação"}
           </button>
         </div>
       )}
 
-      {/* lista credenciado */}
+      {/* lista de credenciados */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Credenciados</h2>
         {credenciados.length === 0 ? (
@@ -276,7 +327,7 @@ export default function AdminPage() {
                 </div>
 
                 {isAdmin && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       className="text-yellow-600 hover:text-yellow-800"
                       onClick={() => openEditModal(c)}
@@ -284,10 +335,11 @@ export default function AdminPage() {
                       Editar
                     </button>
                     <button
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-800 disabled:opacity-60"
                       onClick={() => handleDelete(c.id)}
+                      disabled={deletingId === c.id}
                     >
-                      Remover
+                      {deletingId === c.id ? "Removendo..." : "Remover"}
                     </button>
                   </div>
                 )}
@@ -297,7 +349,7 @@ export default function AdminPage() {
         )}
       </div>
 
-{/* modal de edição */}
+      {/* modal de edição */}
       {editingCredenciado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded max-w-md w-full">
@@ -344,14 +396,16 @@ export default function AdminPage() {
               <button
                 className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
                 onClick={() => setEditingCredenciado(null)}
+                disabled={savingEdit}
               >
                 Cancelar
               </button>
               <button
-                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
                 onClick={saveEdit}
+                disabled={savingEdit}
               >
-                Salvar
+                {savingEdit ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </div>
