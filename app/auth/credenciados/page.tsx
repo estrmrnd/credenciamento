@@ -27,8 +27,9 @@ type Credenciado = {
   empresa: string
   telefone: string
   qtdColaboradores: string
+  tipoPessoa: 'pessoaFisica' | 'empresa' | 'colaborador' // <- adicionado
   dataCredenciamento?: string
-  checkInAt?: string // <-- adicionado
+  checkInAt?: string | null
 }
 
 export default function CredenciadosPage() {
@@ -40,35 +41,37 @@ export default function CredenciadosPage() {
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [selecionado, setSelecionado] = useState<Credenciado | null>(null)
 
-  const printRef = useRef<HTMLDivElement | null>(null);
+  const printRef = useRef<HTMLDivElement | null>(null)
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
   });
-  
+
   useEffect(() => {
     const fetchCredenciados = async () => {
       const snapshot = await getDocs(collection(db, 'credenciados'))
-      const lista: Credenciado[] = []
+      const mapCredenciados = new Map<string, Credenciado>() // <- evita duplicados
+
       snapshot.forEach((doc) => {
         const data = doc.data() as any
+
         const createdAtFormatted =
           data.createdAt instanceof Timestamp
             ? data.createdAt.toDate().toISOString()
             : data.createdAt || ''
-        const checkInFormatted =
-          data.checkInAt instanceof Timestamp
-            ? data.checkInAt.toDate().toISOString()
-            : data.checkInAt || ''
-            lista.push({
-              id: doc.id,
-              ...data,
-              dataCredenciamento: createdAtFormatted,
-              checkInAt: data.checkInAt ? data.checkInAt.toDate() : null
-            })
+
+        mapCredenciados.set(doc.id, {
+          id: doc.id,
+          ...data,
+          tipoPessoa: data.tipoPessoa, // <- pega direto do Firestore
+          dataCredenciamento: createdAtFormatted,
+          checkInAt: data.checkInAt ? data.checkInAt.toDate() : null,
+        })
       })
-      setDados(lista)
+
+      setDados(Array.from(mapCredenciados.values()))
     }
+
     fetchCredenciados()
   }, [])
 
@@ -190,8 +193,15 @@ export default function CredenciadosPage() {
                 <p><strong>Email:</strong> {item.email}</p>
                 <p><strong>CPF:</strong> {item.cpf}</p>
                 <p><strong>Empresa:</strong> {item.empresa}</p>
-                <p><strong>Colaboradores:</strong> {item.qtdColaboradores}</p>
                 <p><strong>Telefone:</strong> {item.telefone}</p>
+                <p>
+                  <strong>Tipo:</strong>{' '}
+                  {item.tipoPessoa === 'pessoaFisica'
+                    ? 'Pessoa Física'
+                    : item.tipoPessoa === 'empresa'
+                    ? 'Empresa'
+                    : 'Colaborador'}
+                </p>
                 {item.dataCredenciamento ? (
                   <p><strong>Data Credenciamento:</strong> {new Date(item.dataCredenciamento).toLocaleDateString()}</p>
                 ) : (
@@ -239,14 +249,13 @@ export default function CredenciadosPage() {
           </button>
         </div>
       )}
-
-      {/* crachá oculto para impressão */}
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
           {selecionado && (
             <CredencialPrint
               nome={selecionado.nome}
               empresa={selecionado.empresa}
+              tipoPessoa={selecionado.tipoPessoa}
             />
           )}
         </div>
