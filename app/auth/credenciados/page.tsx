@@ -1,22 +1,22 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
-import { auth, db } from '../../../lib/firebase'
-import { collection, getDocs, Timestamp } from 'firebase/firestore'
-import { Card } from '../../../src/components/card'
-import router from 'next/router'
-import { signOut } from 'firebase/auth'
-import { useReactToPrint } from 'react-to-print'
 import CredencialPrint from '@/app/credencialPrint'
 import { Button } from '@/components/ui/button'
+import { signOut } from 'firebase/auth'
+import { collection, getDocs, Timestamp } from 'firebase/firestore'
 import { Printer } from 'lucide-react'
+import router from 'next/router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useReactToPrint } from 'react-to-print'
+import { auth, db } from '../../../lib/firebase'
+import { Card } from '../../../src/components/card'
 
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 
 type Credenciado = {
@@ -34,7 +34,7 @@ type Credenciado = {
 export default function CredenciadosPage() {
   const [dados, setDados] = useState<Credenciado[]>([])
   const [filtroTexto, setFiltroTexto] = useState('')
-  const [filtroEmpresa, setFiltroEmpresa] = useState('')
+  const [filtroEmpresa, setFiltroEmpresa] = useState<'all' | string>('all')
   const [ordenacao, setOrdenacao] = useState<'asc' | 'desc'>('asc')
   const [itensPorPagina, setItensPorPagina] = useState(10)
   const [paginaAtual, setPaginaAtual] = useState(1)
