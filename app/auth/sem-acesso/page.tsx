@@ -14,7 +14,6 @@ export default function AcessoNegado() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="text-center space-y-6 p-6 border border-border rounded-2xl shadow-2xl bg-card w-full max-w-md"
       >
-        {/* Ícone com animação */}
         <motion.div
           initial={{ rotate: -10, opacity: 0 }}
           animate={{ rotate: 0, opacity: 1 }}

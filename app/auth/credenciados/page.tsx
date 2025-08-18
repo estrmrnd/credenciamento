@@ -240,7 +240,6 @@ export default function CredenciadosPage() {
         </div>
       )}
 
-      {/* crachá oculto para impressão */}
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
           {selecionado && (

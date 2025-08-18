@@ -61,7 +61,7 @@ export default function CredenciamentoPage() {
       </h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
-        {/* Tipo Pessoa */}
+
         <div className="flex flex-row gap-2 mb-4 text-sm">
           {([
             { value: 'pessoaFisica', label: 'Pessoa Física' },
@@ -76,7 +76,6 @@ export default function CredenciamentoPage() {
         </div>
         {errors.tipoPessoa && <p className="text-red-500 text-sm">Escolha uma opção</p>}
 
-        {/* Nome/Razão Social com sugestões */}
         <SuggestInput
           registerReturn={register('nome', {
             required: true,
@@ -89,7 +88,6 @@ export default function CredenciamentoPage() {
           error={errors.nome && 'Nome é obrigatório'}
         />
 
-        {/* Email */}
         <Input
           type="email"
           placeholder="E-mail"
@@ -98,7 +96,6 @@ export default function CredenciamentoPage() {
         />
         {errors.email && <p className="text-red-500 text-sm">E-mail é obrigatório</p>}
 
-        {/* CPF/CNPJ */}
         <Input
           type="text"
           placeholder={tipoPessoa === 'empresa' ? 'CNPJ' : 'CPF'}
@@ -107,7 +104,6 @@ export default function CredenciamentoPage() {
         />
         {errors.cpf && <p className="text-red-500 text-sm">CPF ou CNPJ é obrigatório</p>}
 
-        {/* Empresa (empresa/colaborador) */}
         {(tipoPessoa === 'empresa' || tipoPessoa === 'colaborador') && (
           <SuggestInput
             registerReturn={register('empresa', {
@@ -122,9 +118,8 @@ export default function CredenciamentoPage() {
           />
         )}
 
-        {/* Telefone */}
         <Input
-          placeholder="Telefone"
+          placeholder="Telefone com DDD"
           {...register('telefone', { required: true })}
           className="w-full"
         />
