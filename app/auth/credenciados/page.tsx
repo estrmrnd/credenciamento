@@ -515,7 +515,6 @@ type CredenciadoFirestore = {
         </div>
       )}
 
-
       <div style={{ display: 'none' }}>
         <div ref={printRef}>
           {selecionado && (
