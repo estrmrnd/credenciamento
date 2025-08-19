@@ -362,14 +362,14 @@
 // }
 
 'use client'
-
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Swal from "sweetalert2"
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { onAuthStateChanged, type User } from "firebase/auth"
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc } from "firebase/firestore"
-import { auth, db } from "../../../lib/firebase"
+import { addDoc, collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import Swal from "sweetalert2"
 import * as XLSX from "xlsx"
+import { auth, db } from "../../../lib/firebase"
 
 type CredenciadoExcel = {
   Nome?: string

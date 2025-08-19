@@ -259,13 +259,11 @@
 
 import CredencialPrint from '@/app/credencialPrint'
 import { Button } from '@/components/ui/button'
-import { signOut } from 'firebase/auth'
 import { collection, getDocs, Timestamp } from 'firebase/firestore'
 import { Printer } from 'lucide-react'
-import router from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReactToPrint } from 'react-to-print'
-import { auth, db } from '../../../lib/firebase'
+import { db } from '../../../lib/firebase'
 import { Card } from '../../../src/components/card'
 
 import {
@@ -388,14 +386,14 @@ type CredenciadoFirestore = {
     setPaginaAtual(1)
   }, [filtroTexto, filtroEmpresa, itensPorPagina, ordenacao])
 
-  async function _handleLogout() {
-    try {
-      await signOut(auth)
-      router.push('/entrar')
-    } catch (error) {
-      console.error(error)
-    }
-  }
+  // async function _handleLogout() {
+  //   try {
+  //     await signOut(auth)
+  //     router.push('/entrar')
+  //   } catch (error) {
+  //     console.error(error)
+  //   }
+  // }
 
   return (
     <div className="max-w-5xl mx-auto mt-10 mb-[5vh] px-4">

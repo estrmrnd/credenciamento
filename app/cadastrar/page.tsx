@@ -138,19 +138,19 @@
 // }
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 import {
   createUserWithEmailAndPassword,
-  signInWithPopup,
   GoogleAuthProvider,
+  signInWithPopup,
   type UserCredential
 } from 'firebase/auth'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { auth, db } from '../../lib/firebase'
-import { doc, setDoc, getDoc, type DocumentData } from 'firebase/firestore'
 import { ModeToggle } from '../temaEscuro/icons'
 import { Input } from '../temaEscuro/input'
-import { Button } from '@/components/ui/button'
 
 export default function SignupPage() {
   const router = useRouter()
