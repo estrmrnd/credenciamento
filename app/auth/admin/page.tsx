@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { onAuthStateChanged, type User } from "firebase/auth"
 import {
@@ -9,7 +9,7 @@ import {
   getDocs,
   serverTimestamp,
   updateDoc,
-  writeBatch
+  writeBatch,
 } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -18,41 +18,43 @@ import * as XLSX from "xlsx"
 import { auth, db } from "../../../lib/firebase"
 
 type Credenciado = {
-  id: string
-  nome: string
-  email: string
-  cpf?: string
-  telefone?: string
-  tipoPessoa?: string
-}
+  id: string;
+  nome: string;
+  email: string;
+  cpf?: string;
+  telefone?: string;
+  tipoPessoa?: string;
+};
+
+type CredenciadoExcel = {
+  Nome?: string;
+  Email?: string;
+  CPF?: string;
+  Telefone?: string;
+  TipoPessoa?: string;
+};
 
 export default function AdminPage() {
-  const [loading, setLoading] = useState(true)
-  const [_user, setUser] = useState<User | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [credenciados, setCredenciados] = useState<Credenciado[]>([])
-  const [previewData, setPreviewData] = useState<Credenciado[]>([])
-  const [editingCredenciado, setEditingCredenciado] = useState<Credenciado | null>(null)
+  const [loading, setLoading] = useState(true);
+  const [_user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [credenciados, setCredenciados] = useState<Credenciado[]>([]);
+  const [previewData, setPreviewData] = useState<Credenciado[]>([]);
+  const [editingCredenciado, setEditingCredenciado] = useState<Credenciado | null>(null);
 
   // flags de UX
-  const [savingEdit, setSavingEdit] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-type CredenciadoExcel = {
-  Nome?: string
-  Email?: string
-  CPF?: string
-  Telefone?: string
-  TipoPessoa?: string
-}
-  const router = useRouter()
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const router = useRouter();
 
   // -------- carregar credenciados --------
   const loadCredenciados = useCallback(async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "credenciados"))
+      const querySnapshot = await getDocs(collection(db, "credenciados"));
       const list: Credenciado[] = querySnapshot.docs.map((d) => {
-        const data = d.data() as Partial<Credenciado>
+        const data = d.data() as Partial<Credenciado>;
         return {
           id: d.id,
           nome: data.nome || "Sem nome",
@@ -60,84 +62,84 @@ type CredenciadoExcel = {
           cpf: data.cpf,
           telefone: data.telefone,
           tipoPessoa: data.tipoPessoa,
-        }
-      })
-      setCredenciados(list)
+        };
+      });
+      setCredenciados(list);
     } catch (error) {
-      console.error("Erro ao carregar credenciados:", error)
-      Swal.fire("Erro", "Não foi possível carregar os credenciados", "error")
+      console.error("Erro ao carregar credenciados:", error);
+      Swal.fire("Erro", "Não foi possível carregar os credenciados", "error");
     }
-  }, [])
+  }, []);
 
   // -------- verificar usuário/admin --------
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        setLoading(false)
-        router.push("/entrar")
-        return
+        setLoading(false);
+        router.push("/entrar");
+        return;
       }
-      setUser(currentUser)
+      setUser(currentUser);
 
       try {
-        const docRef = doc(db, "users", currentUser.uid)
-        const docSnap = await getDoc(docRef)
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
-          setLoading(false)
-          Swal.fire("Acesso negado", "Você não tem permissão para acessar esta página", "error")
-          router.push("/auth/sem-acesso")
-          return
+          setLoading(false);
+          Swal.fire("Acesso negado", "Você não tem permissão para acessar esta página", "error");
+          router.push("/auth/sem-acesso");
+          return;
         }
 
-        const data = docSnap.data()
+        const data = docSnap.data();
         // Ideal: guardar isAdmin como boolean no Firestore
-        const adminFlag = !!data?.isAdmin
+        const adminFlag = !!data?.isAdmin;
 
         if (adminFlag) {
-          setIsAdmin(true)
-          await loadCredenciados()
+          setIsAdmin(true);
+          await loadCredenciados();
         } else {
-          setLoading(false)
-          Swal.fire("Acesso negado", "Você não tem permissão para acessar esta página", "error")
-          router.push("/auth/sem-acesso")
-          return
+          setLoading(false);
+          Swal.fire("Acesso negado", "Você não tem permissão para acessar esta página", "error");
+          router.push("/auth/sem-acesso");
+          return;
         }
       } catch (error) {
-        console.error("Erro ao verificar usuário/admin:", error)
-        Swal.fire("Erro", "Ocorreu um problema ao verificar acesso", "error")
-        router.push("/entrar")
+        console.error("Erro ao verificar usuário/admin:", error);
+        Swal.fire("Erro", "Ocorreu um problema ao verificar acesso", "error");
+        router.push("/entrar");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    })
+    });
 
-    return () => unsubscribe()
-  }, [router, loadCredenciados])
+    return () => unsubscribe();
+  }, [router, loadCredenciados]);
 
   // -------- exportar CSV --------
   function exportCSV() {
     if (credenciados.length === 0) {
-      Swal.fire("Aviso", "Nenhum credenciado para exportar", "info")
-      return
+      Swal.fire("Aviso", "Nenhum credenciado para exportar", "info");
+      return;
     }
-    const headers = ["Nome", "Email", "CPF", "Telefone", "TipoPessoa"]
+    const headers = ["Nome", "Email", "CPF", "Telefone", "TipoPessoa"];
     const rows = credenciados.map((c) => [
       c.nome,
       c.email,
       c.cpf || "",
       c.telefone || "",
       c.tipoPessoa || "",
-    ])
-    const csv = [headers, ...rows].map((e) => e.join(",")).join("\n")
-    const csvContent = "data:text/csv;charset=utf-8," + csv
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "credenciados.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    ]);
+    const csv = [headers, ...rows].map((e) => e.join(",")).join("\n");
+    const csvContent = "data:text/csv;charset=utf-8," + csv;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "credenciados.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   // -------- remover credenciado (Apaga do Firestore) --------
@@ -149,65 +151,64 @@ type CredenciadoExcel = {
       showCancelButton: true,
       confirmButtonText: "Sim, apagar",
       cancelButtonText: "Cancelar",
-    })
-    if (!result.isConfirmed) return
+    });
+    if (!result.isConfirmed) return;
 
     try {
-      setDeletingId(id)
-      await deleteDoc(doc(db, "credenciados", id))
-      setCredenciados((prev) => prev.filter((c) => c.id !== id))
-      Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success")
+      setDeletingId(id);
+      await deleteDoc(doc(db, "credenciados", id));
+      setCredenciados((prev) => prev.filter((c) => c.id !== id));
+      Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success");
     } catch (error: any) {
       if (error?.code === "permission-denied") {
-        Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning")
+        Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning");
       } else {
-        console.error("Erro ao remover:", error)
-        Swal.fire("Erro", "Não foi possível remover o credenciado", "error")
+        console.error("Erro ao remover:", error);
+        Swal.fire("Erro", "Não foi possível remover o credenciado", "error");
       }
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
   }
 
   // -------- editar credenciado --------
   function openEditModal(c: Credenciado) {
-    setEditingCredenciado(c)
+    setEditingCredenciado(c);
   }
 
   function handleEditChange(field: keyof Credenciado, value: string) {
-    if (!editingCredenciado) return
-    setEditingCredenciado({ ...editingCredenciado, [field]: value })
+    if (!editingCredenciado) return;
+    setEditingCredenciado({ ...editingCredenciado, [field]: value });
   }
 
   async function saveEdit() {
-    if (!editingCredenciado) return
-    const { id, ...data } = editingCredenciado
+    if (!editingCredenciado) return;
+    const { id, ...data } = editingCredenciado;
     try {
-      setSavingEdit(true)
-      await updateDoc(doc(db, "credenciados", id), data as Partial<Omit<Credenciado, "id">>)
-      Swal.fire("Sucesso", "Credenciado atualizado com sucesso!", "success")
-      setEditingCredenciado(null)
-      await loadCredenciados()
+      setSavingEdit(true);
+      await updateDoc(doc(db, "credenciados", id), data as Partial<Omit<Credenciado, "id">>);
+      Swal.fire("Sucesso", "Credenciado atualizado com sucesso!", "success");
+      setEditingCredenciado(null);
+      await loadCredenciados();
     } catch (error) {
-      console.error("Erro ao atualizar:", error)
-      Swal.fire("Erro", "Não foi possível atualizar o credenciado", "error")
+      console.error("Erro ao atualizar:", error);
+      Swal.fire("Erro", "Não foi possível atualizar o credenciado", "error");
     } finally {
-      setSavingEdit(false)
+      setSavingEdit(false);
     }
   }
 
   // -------- importar Excel (pré-visualização + confirmar) --------
   async function handleImportExcel(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
     try {
-      const data = await file.arrayBuffer()
-      const workbook = XLSX.read(data)
-      const sheetName = workbook.SheetNames[0]
-      const worksheet = workbook.Sheets[sheetName]
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
 
-      // ✅ Tipagem ajustada aqui
-      const jsonData: CredenciadoExcel[] = XLSX.utils.sheet_to_json<CredenciadoExcel>(worksheet)
+      const jsonData: CredenciadoExcel[] = XLSX.utils.sheet_to_json<CredenciadoExcel>(worksheet);
       const preview: Credenciado[] = jsonData
         .filter((item) => item.Nome && item.Email)
         .map((item) => ({
@@ -217,27 +218,27 @@ type CredenciadoExcel = {
           cpf: item.CPF ?? "",
           telefone: item.Telefone ?? "",
           tipoPessoa: item.TipoPessoa ?? "pessoaFisica",
-        }))
+        }));
 
-      setPreviewData(preview)
+      setPreviewData(preview);
     } catch (error) {
-      console.error("Erro ao ler Excel:", error)
-      Swal.fire("Erro", "Não foi possível ler o arquivo", "error")
+      console.error("Erro ao ler Excel:", error);
+      Swal.fire("Erro", "Não foi possível ler o arquivo", "error");
     }
   }
 
   async function confirmImport() {
     if (previewData.length === 0) {
-      Swal.fire("Aviso", "Nenhum dado para importar", "info")
-      return
+      Swal.fire("Aviso", "Nenhum dado para importar", "info");
+      return;
     }
     try {
-      setImporting(true)
-      const batch = writeBatch(db)
-      const col = collection(db, "credenciados")
+      setImporting(true);
+      const batch = writeBatch(db);
+      const col = collection(db, "credenciados");
 
       for (const item of previewData) {
-        const ref = doc(col)
+        const ref = doc(col);
         batch.set(ref, {
           nome: item.nome,
           email: item.email,
@@ -245,24 +246,24 @@ type CredenciadoExcel = {
           telefone: item.telefone ?? "",
           tipoPessoa: item.tipoPessoa ?? "pessoaFisica",
           createdAt: serverTimestamp(),
-        })
+        });
       }
 
-      await batch.commit()
-      Swal.fire("Sucesso", "Credenciados importados com sucesso!", "success")
-      setPreviewData([])
-      await loadCredenciados()
+      await batch.commit();
+      Swal.fire("Sucesso", "Credenciados importados com sucesso!", "success");
+      setPreviewData([]);
+      await loadCredenciados();
     } catch (error) {
-      console.error("Erro ao importar dados:", error)
-      Swal.fire("Erro", "Não foi possível importar os dados", "error")
+      console.error("Erro ao importar dados:", error);
+      Swal.fire("Erro", "Não foi possível importar os dados", "error");
     } finally {
-      setImporting(false)
+      setImporting(false);
     }
   }
 
   // -------- render --------
-  if (loading) return <p>Carregando...</p>
-  if (!isAdmin) return <p>Acesso negado</p>
+  if (loading) return <p>Carregando...</p>;
+  if (!isAdmin) return <p>Acesso negado</p>;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -421,5 +422,5 @@ type CredenciadoExcel = {
         </div>
       )}
     </div>
-  )
+  );
 }
