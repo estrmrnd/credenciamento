@@ -307,18 +307,18 @@ export default function CredenciadosPage() {
     const fetchCredenciados = async () => {
       const snapshot = await getDocs(collection(db, 'credenciados'))
 
-      // Tipagem específica para evitar 'any'
-      type CredenciadoFirestore = {
-        nome?: string
-        email?: string
-        cpf?: string
-        empresa?: string
-        telefone?: string
-        qtdColaboradores?: string
-        createdAt?: Timestamp
-        checkInAt?: Timestamp
-        [key: string]: any
-      }
+type CredenciadoFirestore = {
+  nome?: string
+  email?: string
+  cpf?: string
+  empresa?: string
+  telefone?: string
+  qtdColaboradores?: string
+  createdAt?: Timestamp
+  checkInAt?: Timestamp
+  // Para campos extras desconhecidos, usamos unknown em vez de any
+  [key: string]: string | Timestamp | undefined
+}
 
       const lista: Credenciado[] = []
 
