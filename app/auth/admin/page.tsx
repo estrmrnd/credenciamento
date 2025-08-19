@@ -1,4 +1,4 @@
-// 'use client'
+'use client'
 
 import { onAuthStateChanged, type User } from "firebase/auth"
 import {
@@ -321,7 +321,7 @@ type CredenciadoExcel = {
         </div>
       )}
 
-    // lista de credenciados
+      {/* lista de credenciados */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Credenciados</h2>
         {credenciados.length === 0 ? (
@@ -358,7 +358,7 @@ type CredenciadoExcel = {
         )}
       </div>
 
-      // modal de credenciados
+      {/* modal de edição */}
       {editingCredenciado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded max-w-md w-full">
