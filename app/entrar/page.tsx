@@ -24,7 +24,7 @@ export default function SignIn() {
       await signInWithEmailAndPassword(auth, email, password)
       setLoading(false)
       router.push('/auth/credenciamento')
-    } catch (err) {
+    } catch (_err) {
       setLoading(false)
       setError('Email ou senha inválidos.')
     }
@@ -39,7 +39,7 @@ export default function SignIn() {
       await signInWithPopup(auth, provider)
       setLoading(false)
       router.push('/auth/credenciamento')
-    } catch (err) {
+    } catch (_err) {
       setLoading(false)
       setError('Erro ao entrar com Google.')
     }

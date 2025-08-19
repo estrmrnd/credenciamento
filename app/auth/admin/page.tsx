@@ -390,7 +390,7 @@ type Credenciado = {
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<User | null>(null)
+  const [_user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [credenciados, setCredenciados] = useState<Credenciado[]>([])
   const [previewData, setPreviewData] = useState<Credenciado[]>([])
@@ -468,7 +468,7 @@ export default function AdminPage() {
     const rows = credenciados.map((c) => [
       c.nome, c.email, c.cpf || "", c.telefone || "", c.tipoPessoa || ""
     ])
-    let csvContent =
+    const csvContent =
       "data:text/csv;charset=utf-8," +
       [headers, ...rows].map((e) => e.join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
