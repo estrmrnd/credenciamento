@@ -26,7 +26,7 @@ export default function AdminPage() {
   const [editingCredenciado, setEditingCredenciado] = useState<Credenciado | null>(null)
   const router = useRouter()
 
-  {/* verificar usuario */}
+  // verificar usuario
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
@@ -65,7 +65,7 @@ export default function AdminPage() {
     return () => unsubscribe()
   }, [router])
 
-  {/* carregar credenciado */}
+  // carregar credenciado
   async function loadCredenciados() {
     try {
       const querySnapshot = await getDocs(collection(db, "credenciados"))
@@ -87,7 +87,7 @@ export default function AdminPage() {
     }
   }
 
-  {/* exportar */}
+  // exportar
   function exportCSV() {
     if (credenciados.length === 0) {
       Swal.fire("Aviso", "Nenhum credenciado para exportar", "info")
@@ -97,7 +97,7 @@ export default function AdminPage() {
     const rows = credenciados.map((c) => [
       c.nome, c.email, c.cpf || "", c.telefone || "", c.tipoPessoa || ""
     ])
-    let csvContent =
+    const csvContent =
       "data:text/csv;charset=utf-8," +
       [headers, ...rows].map((e) => e.join(",")).join("\n")
     const encodedUri = encodeURI(csvContent)
@@ -109,7 +109,7 @@ export default function AdminPage() {
     document.body.removeChild(link)
   }
 
-  {/* remover credenciado */}
+  // remover credenciado
   function handleDelete(id: string) {
     Swal.fire({
       title: "Tem certeza?",
@@ -126,7 +126,7 @@ export default function AdminPage() {
     })
   }
 
-  {/* editar credenciado */}
+  // editar credenciado
   function openEditModal(c: Credenciado) {
     setEditingCredenciado(c)
   }
@@ -150,7 +150,7 @@ export default function AdminPage() {
     }
   }
 
-  {/* preview da importação via excel */}
+  // preview da importação via excel
   async function handleImportExcel(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
@@ -202,7 +202,7 @@ export default function AdminPage() {
     }
   }
 
-  {/* render */}
+  // render 
   if (loading) return <p>Carregando...</p>
   if (!isAdmin) return <p>Acesso negado</p>
 
@@ -210,7 +210,6 @@ export default function AdminPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Painel do Administrador</h1>
 
-      {/* botao de importar e exportar csv */}
       <div className="flex gap-4 mb-6">
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -225,8 +224,6 @@ export default function AdminPage() {
           className="border p-2 rounded"
         />
       </div>
-
-      {/* pre-visu da importação csv */}
       {previewData.length > 0 && (
         <div className="mb-6 border p-4 rounded bg-gray-50">
           <h3 className="font-semibold mb-2">Pré-visualização da importação</h3>
@@ -261,7 +258,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* lista credenciado */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Credenciados</h2>
         {credenciados.length === 0 ? (
@@ -297,7 +293,6 @@ export default function AdminPage() {
         )}
       </div>
 
-{/* modal de edição */}
       {editingCredenciado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded max-w-md w-full">
