@@ -28,7 +28,7 @@ type Credenciado = {
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<User | null>(null)
+  const [_user, setUser] = useState<User | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [credenciados, setCredenciados] = useState<Credenciado[]>([])
   const [previewData, setPreviewData] = useState<Credenciado[]>([])
@@ -38,7 +38,13 @@ export default function AdminPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [importing, setImporting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-
+type CredenciadoExcel = {
+  Nome?: string
+  Email?: string
+  CPF?: string
+  Telefone?: string
+  TipoPessoa?: string
+}
   const router = useRouter()
 
   // -------- carregar credenciados --------
@@ -199,17 +205,20 @@ export default function AdminPage() {
       const workbook = XLSX.read(data)
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
-      const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet)
+
+      // ✅ Tipagem ajustada aqui
+      const jsonData: CredenciadoExcel[] = XLSX.utils.sheet_to_json<CredenciadoExcel>(worksheet)
       const preview: Credenciado[] = jsonData
         .filter((item) => item.Nome && item.Email)
         .map((item) => ({
           id: "",
-          nome: item.Nome,
-          email: item.Email,
-          cpf: item.CPF || "",
-          telefone: item.Telefone || "",
-          tipoPessoa: item.TipoPessoa || "pessoaFisica",
+          nome: item.Nome ?? "",
+          email: item.Email ?? "",
+          cpf: item.CPF ?? "",
+          telefone: item.Telefone ?? "",
+          tipoPessoa: item.TipoPessoa ?? "pessoaFisica",
         }))
+
       setPreviewData(preview)
     } catch (error) {
       console.error("Erro ao ler Excel:", error)
