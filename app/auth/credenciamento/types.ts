@@ -7,4 +7,6 @@ export type Credenciado = {
     empresa: string
     telefone: string
     tipoPessoa: TipoPessoa
+    funcao: string
+    observacao: string
 }

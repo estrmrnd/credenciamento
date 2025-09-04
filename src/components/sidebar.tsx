@@ -43,9 +43,9 @@ export function DropdownMenuCheckboxes() {
         <DropdownMenuItem asChild>
           <Link href="/auth/credenciados">Credenciados</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        {/* <DropdownMenuItem asChild>
           <Link href="/auth/checkin">Check In</Link>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           Sair
