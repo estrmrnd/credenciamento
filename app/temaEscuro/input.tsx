@@ -1,7 +1,7 @@
 'use client'
 
-import * as React from 'react'
 import { cn } from '@/lib/utils'
+import * as React from 'react'
 
 const Input = React.forwardRef<
   HTMLInputElement,
@@ -26,4 +26,3 @@ const Input = React.forwardRef<
 Input.displayName = 'Input'
 
 export { Input }
-

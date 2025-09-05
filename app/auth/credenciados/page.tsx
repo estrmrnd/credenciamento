@@ -54,6 +54,18 @@ export default function CredenciadosPage() {
   const [itensPorPagina, setItensPorPagina] = useState(10);
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [selecionado, setSelecionado] = useState<Credenciado | null>(null);
+
+  // estados de check-in
+  const [modalCheckIn, setModalCheckIn] = useState<Credenciado | null>(null);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const printRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+  });
+
   function exportarExcel() {
     const worksheetData = dadosOrdenados.map((item) => ({
       Nome: item.nome,
@@ -64,7 +76,6 @@ export default function CredenciadosPage() {
       Função: item.funcao,
       Observação: item.observacao,
       Telefone: item.telefone,
-      // "Qtd Colaboradores": item.qtdColaboradores,
       "Data Credenciamento": item.dataCredenciamento
         ? new Date(item.dataCredenciamento).toLocaleString("pt-BR")
         : "",
@@ -76,20 +87,8 @@ export default function CredenciadosPage() {
     const worksheet = XLSX.utils.json_to_sheet(worksheetData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Credenciados");
-
     XLSX.writeFile(workbook, "credenciados.xlsx");
   }
-
-  // Novos estados para check-in
-  const [modalCheckIn, setModalCheckIn] = useState<Credenciado | null>(null);
-  const [mensagem, setMensagem] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const printRef = useRef<HTMLDivElement | null>(null);
-
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-  });
 
   async function fetchCredenciados(
     setDados: React.Dispatch<React.SetStateAction<Credenciado[]>>
@@ -103,9 +102,9 @@ export default function CredenciadosPage() {
       empresa?: string;
       telefone?: string;
       qtdColaboradores?: string;
-      tipoPessoa: string;
-      funcao: string;
-      observacao: string;
+      tipoPessoa?: string;
+      funcao?: string;
+      observacao?: string;
       createdAt?: Timestamp;
       checkInAt?: Timestamp;
       [key: string]: string | Timestamp | undefined;
@@ -119,7 +118,7 @@ export default function CredenciadosPage() {
       const createdAtFormatted =
         data.createdAt instanceof Timestamp
           ? data.createdAt.toDate().toISOString()
-          : data.createdAt || "";
+          : (data.createdAt as string) || "";
 
       lista.push({
         id: docSnap.id,
@@ -168,10 +167,11 @@ export default function CredenciadosPage() {
 
   const dadosOrdenados = useMemo(() => {
     const lista = [...dadosFiltrados];
-    lista.sort((a, b) => {
-      if (ordenacao === "asc") return a.nome.localeCompare(b.nome);
-      else return b.nome.localeCompare(a.nome);
-    });
+    lista.sort((a, b) =>
+      ordenacao === "asc"
+        ? a.nome.localeCompare(b.nome)
+        : b.nome.localeCompare(a.nome)
+    );
     return lista;
   }, [dadosFiltrados, ordenacao]);
 
@@ -184,6 +184,7 @@ export default function CredenciadosPage() {
     setPaginaAtual(1);
   }, [filtroTexto, filtroEmpresa, itensPorPagina, ordenacao]);
 
+  // logout (mantido, caso queira usar num botão futuramente)
   async function _handleLogout() {
     try {
       await signOut(auth);
@@ -193,7 +194,7 @@ export default function CredenciadosPage() {
     }
   }
 
-  // Função de check-in com validação
+  // check-in com validação de mesmo dia
   async function fazerCheckIn(credenciado: Credenciado) {
     setLoading(true);
     setMensagem(null);
@@ -300,14 +301,10 @@ export default function CredenciadosPage() {
       </div>
 
       <div className="flex justify-end mb-4">
-        <Button className="cursor-pointer" onClick={exportarExcel}>Exportar Excel</Button>
+        <Button className="cursor-pointer" onClick={exportarExcel}>
+          Exportar Excel
+        </Button>
       </div>
-
-      {/* {mensagem && (
-        <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">
-          {mensagem}
-        </div>
-      )} */}
 
       {/* lista */}
       {paginaDados.length === 0 ? (
@@ -368,7 +365,8 @@ export default function CredenciadosPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button className="cursor-pointer"
+                <Button
+                  className="cursor-pointer"
                   variant="outline"
                   size="icon"
                   onClick={() => {
@@ -378,9 +376,10 @@ export default function CredenciadosPage() {
                 >
                   <Printer className="h-5 w-5" />
                 </Button>
-                <Button className="cursor-pointer"
+                <Button
+                  className="cursor-pointer"
                   onClick={() => {
-                    setMensagem(null); // limpa mensagem anterior
+                    setMensagem(null);
                     setModalCheckIn(item);
                   }}
                 >
@@ -435,52 +434,45 @@ export default function CredenciadosPage() {
           if (!open) {
             setModalCheckIn(null);
             setMensagem(null);
-            fetchCredenciados(setDados); // recarrega apenas os dados
+            fetchCredenciados(setDados);
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Check-in</DialogTitle>
+            <DialogTitle>
+              {modalCheckIn ? `Check-in de ${modalCheckIn.nome}` : "Check-in"}
+            </DialogTitle>
           </DialogHeader>
-          {/* Modal de Check-in */}
-          <Dialog
-            open={!!modalCheckIn}
-            onOpenChange={() => setModalCheckIn(null)}
-          >
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Check-in de {modalCheckIn?.nome}</DialogTitle>
-              </DialogHeader>
-              {modalCheckIn && (
-                <div className="space-y-3">
-                  <p>
-                    <strong>CPF:</strong> {modalCheckIn.cpf}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {modalCheckIn.email}
-                  </p>
-                  <p>
-                    <strong>Empresa:</strong> {modalCheckIn.empresa}
-                  </p>
-                  <p>
-                    <strong>Telefone:</strong> {modalCheckIn.telefone}
-                  </p>
-                  <Button className="cursor-pointer"
-                    onClick={() => fazerCheckIn(modalCheckIn)}
-                    disabled={loading}
-                  >
-                    {loading ? "Registrando..." : "Confirmar Check-in"}
-                  </Button>
-                  {mensagem && (
-                    <p className="text-center text-green-600 mt-2">
-                      {mensagem}
-                    </p>
-                  )}
-                </div>
+
+          {modalCheckIn && (
+            <div className="space-y-3">
+              <p>
+                <strong>CPF:</strong> {modalCheckIn.cpf}
+              </p>
+              <p>
+                <strong>Email:</strong> {modalCheckIn.email}
+              </p>
+              <p>
+                <strong>Empresa:</strong> {modalCheckIn.empresa}
+              </p>
+              <p>
+                <strong>Telefone:</strong> {modalCheckIn.telefone}
+              </p>
+
+              <Button
+                className="cursor-pointer"
+                onClick={() => fazerCheckIn(modalCheckIn)}
+                disabled={loading}
+              >
+                {loading ? "Registrando..." : "Confirmar Check-in"}
+              </Button>
+
+              {mensagem && (
+                <p className="text-center text-green-600 mt-2">{mensagem}</p>
               )}
-            </DialogContent>
-          </Dialog>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

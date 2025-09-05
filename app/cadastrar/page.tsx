@@ -138,19 +138,19 @@
 // }
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 import {
   createUserWithEmailAndPassword,
-  signInWithPopup,
   GoogleAuthProvider,
+  signInWithPopup,
   type UserCredential
 } from 'firebase/auth'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { auth, db } from '../../lib/firebase'
-import { doc, setDoc, getDoc, type DocumentData } from 'firebase/firestore'
 import { ModeToggle } from '../temaEscuro/icons'
 import { Input } from '../temaEscuro/input'
-import { Button } from '@/components/ui/button'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -218,13 +218,14 @@ export default function SignupPage() {
 
       <h1 className="text-2xl font-bold mb-4 text-center text-zinc-900 dark:text-zinc-100">Cadastre-se</h1>
 
-      <form onSubmit={handleSignup} className="space-y-4">
+      <form onSubmit={handleSignup} className="space-y-4" autoComplete="off">
         <Input
           type="text"
           placeholder="Nome"
           value={nome}
           onChange={e => setNome(e.target.value)}
           required
+          autoComplete="off"
         />
         <Input
           type="email"
@@ -232,6 +233,7 @@ export default function SignupPage() {
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
+          autoComplete="off"
         />
         <Input
           type="password"
@@ -239,6 +241,7 @@ export default function SignupPage() {
           value={senha}
           onChange={e => setSenha(e.target.value)}
           required
+          autoComplete="off"
         />
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? 'Criando...' : 'Criar'}

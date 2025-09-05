@@ -94,7 +94,6 @@ export default function CredenciamentoPage() {
           <p className="text-red-500 text-sm">Escolha uma opção</p>
         )}
 
-        {/* Nome/Razão Social com sugestões */}
         <SuggestInput
           registerReturn={register("nome", {
             required: true,
@@ -109,7 +108,6 @@ export default function CredenciamentoPage() {
           error={errors.nome && "Nome é obrigatório"}
         />
 
-        {/* Email */}
         <Input
           type="email"
           placeholder="E-mail"
@@ -120,7 +118,6 @@ export default function CredenciamentoPage() {
           <p className="text-red-500 text-sm">E-mail é obrigatório</p>
         )}
 
-        {/* CPF/CNPJ */}
         <Input
           type="text"
           placeholder={tipoPessoa === "empresa" ? "CNPJ" : "CPF"}
@@ -147,6 +144,7 @@ export default function CredenciamentoPage() {
             error={errors.empresa && "Empresa é obrigatória"}
           />
         )}
+
         <Input
           placeholder="Função"
           {...register("funcao")}
@@ -165,7 +163,6 @@ export default function CredenciamentoPage() {
           <p className="text-red-500 text-sm">Observação é obrigatória</p>
         )}
 
-        {/* Telefone */}
         <Input
           placeholder="Telefone"
           {...register("telefone", { required: true })}
