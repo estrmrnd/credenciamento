@@ -1,35 +1,35 @@
 "use client";
 
-import CredencialPrint from "@/app/credencialPrint";
-import { Button } from "@/components/ui/button";
-import { signOut } from "firebase/auth";
+import CredencialPrint from "@/app/credencialPrint"
+import { Button } from "@/components/ui/button"
 import {
-  collection,
-  getDocs,
-  updateDoc,
-  doc,
-  Timestamp,
-} from "firebase/firestore";
-import { Printer } from "lucide-react";
-import router from "next/router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useReactToPrint } from "react-to-print";
-import { auth, db } from "../../../lib/firebase";
-import { Card } from "../../../src/components/card";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
+import { signOut } from "firebase/auth"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import * as XLSX from "xlsx";
+  collection,
+  doc,
+  getDocs,
+  Timestamp,
+  updateDoc,
+} from "firebase/firestore"
+import { Printer } from "lucide-react"
+import router from "next/router"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useReactToPrint } from "react-to-print"
+import * as XLSX from "xlsx"
+import { auth, db } from "../../../lib/firebase"
+import { Card } from "../../../src/components/card"
 
 type Credenciado = {
   id: string;
@@ -118,7 +118,7 @@ export default function CredenciadosPage() {
       const createdAtFormatted =
         data.createdAt instanceof Timestamp
           ? data.createdAt.toDate().toISOString()
-          : (data.createdAt as string) || "";
+          : typeof data.createdAt === "string" ? data.createdAt : "";
 
       lista.push({
         id: docSnap.id,
