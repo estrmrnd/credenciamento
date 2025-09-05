@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Swal from "sweetalert2"
 import { onAuthStateChanged, type User } from "firebase/auth"
-import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp } from "firebase/firestore"
+import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp, deleteDoc } from "firebase/firestore"
 import { auth, db } from "../../../lib/firebase"
 import * as XLSX from "xlsx"
 import { Button } from "@/src/components/ui/button"
@@ -37,7 +37,18 @@ export default function AdminPage() {
   const [credenciados, setCredenciados] = useState<Credenciado[]>([])
   const [previewData, setPreviewData] = useState<Credenciado[]>([])
   const [editingCredenciado, setEditingCredenciado] = useState<Credenciado | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const router = useRouter()
+  const [showFileInput, setShowFileInput] = useState(true)
+
+
+  // Novos estados para filtro, ordenação e paginação
+  const [filtroTexto, setFiltroTexto] = useState("")
+  const [filtroTipo, setFiltroTipo] = useState<"all" | string>("all")
+  const [ordenacao, setOrdenacao] = useState<"asc" | "desc">("asc")
+  const [itensPorPagina, setItensPorPagina] = useState(10)
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  
 
   // verificar usuario
   useEffect(() => {
@@ -179,29 +190,57 @@ async function confirmImport() {
         createdAt: serverTimestamp()
       })
     }
+
     Swal.fire("Sucesso", "Credenciados importados com sucesso!", "success")
-    setPreviewData([])
-    await loadCredenciados()
+
+    setPreviewData([]);
+
+    setPreviewData([]);
+
+    // recria o input para voltar a mensagem "Escolher arquivo..."
+    setShowFileInput(false);
+    setTimeout(() => setShowFileInput(true), 0);
+
+    await loadCredenciados();
   } catch (error) {
-    console.error("Erro ao importar dados:", error)
-    Swal.fire("Erro", "Não foi possível importar os dados", "error")
+    console.error("Erro ao importar dados:", error);
+    Swal.fire("Erro", "Não foi possível importar os dados", "error");
   }
 }
-  //remover credenciado
-  function handleDelete(id: string) {
-    Swal.fire({
+    
+  //   setPreviewData([]);
+  //   await loadCredenciados()
+  // } catch (error) {
+  //   console.error("Erro ao importar dados:", error)
+  //   Swal.fire("Erro", "Não foi possível importar os dados", "error")
+  // }
+
+    async function handleDelete(id: string) {
+    const result = await Swal.fire({
       title: "Tem certeza?",
-      text: "Isso remove da lista, mas não apaga do banco de dados.",
+      text: "Isso irá APAGAR o registro do banco de dados.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Sim, remover",
+      confirmButtonText: "Sim, apagar",
       cancelButtonText: "Cancelar",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setCredenciados((prev) => prev.filter((c) => c.id !== id))
-        Swal.fire("Removido!", "O credenciado foi removido da lista.", "success")
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingId(id);
+      await deleteDoc(doc(db, "credenciados", id));
+      setCredenciados((prev) => prev.filter((c) => c.id !== id));
+      Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success");
+    } catch (error: any) {
+      if (error?.code === "permission-denied") {
+        Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning");
+      } else {
+        console.error("Erro ao remover:", error);
+        Swal.fire("Erro", "Não foi possível remover o credenciado", "error");
       }
-    })
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // editar credenciado
@@ -228,6 +267,46 @@ async function confirmImport() {
     }
   }
 
+   // ------------------ FILTRO, ORDENAÇÃO E PAGINAÇÃO ------------------
+  const tiposUnicos = useMemo(() => {
+    const setTipos = new Set<string>()
+    credenciados.forEach((c) => {
+      if (c.tipoPessoa) setTipos.add(c.tipoPessoa)
+    })
+    return Array.from(setTipos).sort()
+  }, [credenciados])
+
+  const dadosFiltrados = useMemo(() => {
+    return credenciados.filter((c) => {
+      const texto = filtroTexto.toLowerCase()
+      const matchTexto =
+        c.nome.toLowerCase().includes(texto) ||
+        c.email.toLowerCase().includes(texto)
+      const matchTipo = filtroTipo === "all" ? true : c.tipoPessoa === filtroTipo
+      return matchTexto && matchTipo
+    })
+  }, [credenciados, filtroTexto, filtroTipo])
+
+  const dadosOrdenados = useMemo(() => {
+    const lista = [...dadosFiltrados]
+    lista.sort((a, b) =>
+      ordenacao === "asc" ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome)
+    )
+    return lista
+  }, [dadosFiltrados, ordenacao])
+
+  const totalPaginas = Math.ceil(dadosOrdenados.length / itensPorPagina)
+  const inicio = (paginaAtual - 1) * itensPorPagina
+  const fim = inicio + itensPorPagina
+  const paginaDados = dadosOrdenados.slice(inicio, fim)
+
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [filtroTexto, filtroTipo, itensPorPagina, ordenacao])
+
+  // -------------------------------------------------------------------
+
+
 
   //render
   if (loading) return <p>Carregando...</p>
@@ -236,16 +315,28 @@ async function confirmImport() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Painel do Administrador</h1>
-
+      
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6 space-y-4 md:space-y-0">
+        <input
+          type="text"
+          placeholder="Filtrar por nome, email ou empresa"
+          className="flex-grow p-2 border rounded dark:bg-gray-800 dark:text-white"
+          value={filtroTexto}
+          onChange={(e) => setFiltroTexto(e.target.value)}
+        />
+      </div>
 
       <div className="flex gap-4 mb-6">
-        <Button onClick={exportarCredenciados}>Exportar Excel</Button>
-        <input
+        <Button className="cursor-pointer" onClick={exportarCredenciados}>Exportar Excel</Button>
+        {showFileInput && (
+          <input
+          key={Date.now()} 
           type="file"
           accept=".xlsx, .csv"
           onChange={handleImportExcel}
-          className="border p-2 rounded"
-        />
+          className="border p-2 rounded cursor-pointer"
+          />
+        )}
       </div>
 
 
@@ -275,19 +366,17 @@ async function confirmImport() {
             </tbody>
           </table>
           <div className="pt-1.5">
-          <Button onClick={confirmImport}>Confirmar Importação</Button>
+          <Button className="cursor-pointer" onClick={confirmImport}>Confirmar Importação</Button>
           </div>
         </div>
       )}
-
-
       <div>
         <h2 className="text-2xl font-bold mb-6 dark:text-gray-100">Credenciados</h2>
         {credenciados.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">Nenhum credenciado na lista.</p>
         ) : (
           <ul className="space-y-4">
-            {credenciados.map((c) => (
+            {paginaDados.map((c) => (
               <li key={c.id} className="flex justify-between items-center p-4 border rounded-lg shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-gray-100">{c.nome}</p>
@@ -297,16 +386,23 @@ async function confirmImport() {
                 {isAdmin && (
                   <div className="flex gap-2">
                     <button
-                      className="px-3 py-1 rounded bg-yellow-100 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-100 hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
+                      className="cursor-pointer px-3 py-1 rounded bg-yellow-100 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-100 hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors"
                       onClick={() => openEditModal(c)}
                     >
                       Editar
                     </button>
-                    <button
+                    {/* <button
                       className="px-3 py-1 rounded bg-red-100 dark:bg-red-700 text-red-800 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-600 transition-colors"
                       onClick={() => handleDelete(c.id)}
                     >
                       Remover
+                    </button> */}
+                    <button
+                      className="cursor-pointer px-3 py-1 rounded bg-red-100 dark:bg-red-700 text-red-800 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-600 transition-colors"
+                      onClick={() => handleDelete(c.id)}
+                      disabled={deletingId === c.id}
+                    >
+                      {deletingId === c.id ? "Removendo..." : "Remover"}
                     </button>
                   </div>
                 )}
@@ -315,6 +411,29 @@ async function confirmImport() {
           </ul>
         )}
       </div>
+      {/* paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex justify-between items-center mt-6">
+          <button
+            className="cursor-pointer px-4 py-2 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200"
+            disabled={paginaAtual === 1}
+            onClick={() => setPaginaAtual((prev) => prev - 1)}
+          >
+            Anterior
+          </button>
+          <p className="dark:text-gray-300">
+            Página {paginaAtual} de {totalPaginas}
+          </p>
+          <button
+            className="cursor-pointer px-4 py-2 bg-gray-200 rounded disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200"
+            disabled={paginaAtual === totalPaginas}
+            onClick={() => setPaginaAtual((prev) => prev + 1)}
+          >
+            Próxima
+          </button>
+        </div>
+      )}
+
       {editingCredenciado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 rounded max-w-md w-full border border-gray-300 dark:border-gray-700">
@@ -373,13 +492,13 @@ async function confirmImport() {
 
             <div className="flex justify-end gap-2">
               <button
-                className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                className="cursor-pointer px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
                 onClick={() => setEditingCredenciado(null)}
               >
                 Cancelar
               </button>
               <button
-                className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                className="cursor-pointer px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white"
                 onClick={saveEdit}
               >
                 Salvar

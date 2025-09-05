@@ -1,246 +1,244 @@
-'use client'
+"use client";
 
-import CredencialPrint from '@/app/credencialPrint'
-import { Button } from '@/components/ui/button'
-import { signOut } from 'firebase/auth'
+import CredencialPrint from "@/app/credencialPrint";
+import { Button } from "@/components/ui/button";
+import { signOut } from "firebase/auth";
 import {
   collection,
   getDocs,
   updateDoc,
   doc,
   Timestamp,
-} from 'firebase/firestore'
-import { Printer } from 'lucide-react'
-import router from 'next/router'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useReactToPrint } from 'react-to-print'
-import { auth, db } from '../../../lib/firebase'
-import { Card } from '../../../src/components/card'
+} from "firebase/firestore";
+import { Printer } from "lucide-react";
+import router from "next/router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
+import { auth, db } from "../../../lib/firebase";
+import { Card } from "../../../src/components/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import * as XLSX from "xlsx"
+} from "@/components/ui/dialog";
+import * as XLSX from "xlsx";
 
 type Credenciado = {
-  id: string
-  nome: string
-  email: string
-  cpf: string
-  empresa: string
-  tipoPessoa: string
-  funcao: string
-  observacao: string
-  telefone: string
-  qtdColaboradores: string
-  dataCredenciamento?: string
-  checkInAt?: string
-}
+  id: string;
+  nome: string;
+  email: string;
+  cpf: string;
+  empresa: string;
+  tipoPessoa: string;
+  funcao: string;
+  observacao: string;
+  telefone: string;
+  qtdColaboradores: string;
+  dataCredenciamento?: string;
+  checkInAt?: string;
+};
 
 export default function CredenciadosPage() {
-  const [dados, setDados] = useState<Credenciado[]>([])
-  const [filtroTexto, setFiltroTexto] = useState('')
-  const [filtroEmpresa, setFiltroEmpresa] = useState<'all' | string>('all')
-  const [ordenacao, setOrdenacao] = useState<'asc' | 'desc'>('asc')
-  const [itensPorPagina, setItensPorPagina] = useState(10)
-  const [paginaAtual, setPaginaAtual] = useState(1)
-  const [selecionado, setSelecionado] = useState<Credenciado | null>(null)
+  const [dados, setDados] = useState<Credenciado[]>([]);
+  const [filtroTexto, setFiltroTexto] = useState("");
+  const [filtroEmpresa, setFiltroEmpresa] = useState<"all" | string>("all");
+  const [ordenacao, setOrdenacao] = useState<"asc" | "desc">("asc");
+  const [itensPorPagina, setItensPorPagina] = useState(10);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [selecionado, setSelecionado] = useState<Credenciado | null>(null);
   function exportarExcel() {
-  const worksheetData = dadosOrdenados.map(item => ({
-    Nome: item.nome,
-    Email: item.email,
-    CPF: item.cpf,
-    Empresa: item.empresa,
-    Sou: item.tipoPessoa,
-    Função: item.funcao,
-    Observação: item.observacao,
-    Telefone: item.telefone,
-    // "Qtd Colaboradores": item.qtdColaboradores,
-    "Data Credenciamento": item.dataCredenciamento
-      ? new Date(item.dataCredenciamento).toLocaleString("pt-BR")
-      : "",
-    "Check-in": item.checkInAt
-      ? new Date(item.checkInAt).toLocaleString("pt-BR")
-      : "",
-  }))
+    const worksheetData = dadosOrdenados.map((item) => ({
+      Nome: item.nome,
+      Email: item.email,
+      CPF: item.cpf,
+      Empresa: item.empresa,
+      Sou: item.tipoPessoa,
+      Função: item.funcao,
+      Observação: item.observacao,
+      Telefone: item.telefone,
+      // "Qtd Colaboradores": item.qtdColaboradores,
+      "Data Credenciamento": item.dataCredenciamento
+        ? new Date(item.dataCredenciamento).toLocaleString("pt-BR")
+        : "",
+      "Check-in": item.checkInAt
+        ? new Date(item.checkInAt).toLocaleString("pt-BR")
+        : "",
+    }));
 
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Credenciados")
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Credenciados");
 
-  XLSX.writeFile(workbook, "credenciados.xlsx")
-}
-
+    XLSX.writeFile(workbook, "credenciados.xlsx");
+  }
 
   // Novos estados para check-in
-  const [modalCheckIn, setModalCheckIn] = useState<Credenciado | null>(null)
-  const [mensagem, setMensagem] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [modalCheckIn, setModalCheckIn] = useState<Credenciado | null>(null);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const printRef = useRef<HTMLDivElement | null>(null)
+  const printRef = useRef<HTMLDivElement | null>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-  })
+  });
 
-  async function fetchCredenciados(setDados: React.Dispatch<React.SetStateAction<Credenciado[]>>) {
-  const snapshot = await getDocs(collection(db, 'credenciados'))
+  async function fetchCredenciados(
+    setDados: React.Dispatch<React.SetStateAction<Credenciado[]>>
+  ) {
+    const snapshot = await getDocs(collection(db, "credenciados"));
 
-  type CredenciadoFirestore = {
-    nome?: string
-    email?: string
-    cpf?: string
-    empresa?: string
-    telefone?: string
-    qtdColaboradores?: string
-    tipoPessoa: string
-    funcao: string
-    observacao: string  
-    createdAt?: Timestamp
-    checkInAt?: Timestamp
-    [key: string]: string | Timestamp | undefined
+    type CredenciadoFirestore = {
+      nome?: string;
+      email?: string;
+      cpf?: string;
+      empresa?: string;
+      telefone?: string;
+      qtdColaboradores?: string;
+      tipoPessoa: string;
+      funcao: string;
+      observacao: string;
+      createdAt?: Timestamp;
+      checkInAt?: Timestamp;
+      [key: string]: string | Timestamp | undefined;
+    };
+
+    const lista: Credenciado[] = [];
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data() as CredenciadoFirestore;
+
+      const createdAtFormatted =
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt || "";
+
+      lista.push({
+        id: docSnap.id,
+        nome: data.nome || "",
+        email: data.email || "",
+        cpf: data.cpf || "",
+        empresa: data.empresa || "",
+        telefone: data.telefone || "",
+        tipoPessoa: data.tipoPessoa || "",
+        funcao: data.funcao || "",
+        observacao: data.observacao || "",
+        qtdColaboradores: data.qtdColaboradores || "",
+        dataCredenciamento: createdAtFormatted,
+        checkInAt: data.checkInAt
+          ? data.checkInAt.toDate().toISOString()
+          : undefined,
+      });
+    });
+    setDados(lista);
   }
 
-  const lista: Credenciado[] = []
-
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data() as CredenciadoFirestore
-
-    const createdAtFormatted =
-      data.createdAt instanceof Timestamp
-        ? data.createdAt.toDate().toISOString()
-        : data.createdAt || ''
-
-    lista.push({
-      id: docSnap.id,
-      nome: data.nome || '',
-      email: data.email || '',
-      cpf: data.cpf || '',
-      empresa: data.empresa || '',
-      telefone: data.telefone || '',
-      tipoPessoa: data.tipoPessoa || '',
-      funcao: data.funcao || '',
-      observacao: data.observacao || '',
-      qtdColaboradores: data.qtdColaboradores || '',
-      dataCredenciamento: createdAtFormatted,
-      checkInAt: data.checkInAt
-        ? data.checkInAt.toDate().toISOString()
-        : undefined,
-    })
-  })
-  setDados(lista)
-}
-
   useEffect(() => {
-  fetchCredenciados(setDados)
-}, [])
-
+    fetchCredenciados(setDados);
+  }, []);
 
   const empresasUnicas = useMemo(() => {
-    const setEmpresas = new Set<string>()
+    const setEmpresas = new Set<string>();
     dados.forEach((item) => {
-      if (item.empresa) setEmpresas.add(item.empresa)
-    })
-    return Array.from(setEmpresas).sort()
-  }, [dados])
+      if (item.empresa) setEmpresas.add(item.empresa);
+    });
+    return Array.from(setEmpresas).sort();
+  }, [dados]);
 
   const dadosFiltrados = useMemo(() => {
     return dados.filter((item) => {
-      const texto = filtroTexto.toLowerCase()
+      const texto = filtroTexto.toLowerCase();
       const textoMatch =
         item.nome.toLowerCase().includes(texto) ||
         item.email.toLowerCase().includes(texto) ||
-        item.empresa.toLowerCase().includes(texto)
+        item.empresa.toLowerCase().includes(texto);
       const empresaMatch =
-        filtroEmpresa === 'all' ? true : item.empresa === filtroEmpresa
-      return textoMatch && empresaMatch
-    })
-  }, [dados, filtroTexto, filtroEmpresa])
+        filtroEmpresa === "all" ? true : item.empresa === filtroEmpresa;
+      return textoMatch && empresaMatch;
+    });
+  }, [dados, filtroTexto, filtroEmpresa]);
 
   const dadosOrdenados = useMemo(() => {
-    const lista = [...dadosFiltrados]
+    const lista = [...dadosFiltrados];
     lista.sort((a, b) => {
-      if (ordenacao === 'asc') return a.nome.localeCompare(b.nome)
-      else return b.nome.localeCompare(a.nome)
-    })
-    return lista
-  }, [dadosFiltrados, ordenacao])
+      if (ordenacao === "asc") return a.nome.localeCompare(b.nome);
+      else return b.nome.localeCompare(a.nome);
+    });
+    return lista;
+  }, [dadosFiltrados, ordenacao]);
 
-  const totalPaginas = Math.ceil(dadosOrdenados.length / itensPorPagina)
-  const inicio = (paginaAtual - 1) * itensPorPagina
-  const fim = inicio + itensPorPagina
-  const paginaDados = dadosOrdenados.slice(inicio, fim)
+  const totalPaginas = Math.ceil(dadosOrdenados.length / itensPorPagina);
+  const inicio = (paginaAtual - 1) * itensPorPagina;
+  const fim = inicio + itensPorPagina;
+  const paginaDados = dadosOrdenados.slice(inicio, fim);
 
   useEffect(() => {
-    setPaginaAtual(1)
-  }, [filtroTexto, filtroEmpresa, itensPorPagina, ordenacao])
+    setPaginaAtual(1);
+  }, [filtroTexto, filtroEmpresa, itensPorPagina, ordenacao]);
 
   async function _handleLogout() {
     try {
-      await signOut(auth)
-      router.push('/entrar')
+      await signOut(auth);
+      router.push("/entrar");
     } catch (error) {
-      console.error(error)
+      console.error(error);
     }
   }
 
   // Função de check-in com validação
   async function fazerCheckIn(credenciado: Credenciado) {
-    setLoading(true)
-    setMensagem(null)
+    setLoading(true);
+    setMensagem(null);
 
     try {
       if (credenciado.checkInAt) {
-        const checkinDate = new Date(credenciado.checkInAt)
-        const today = new Date()
+        const checkinDate = new Date(credenciado.checkInAt);
+        const today = new Date();
 
         const mesmoDia =
           checkinDate.getDate() === today.getDate() &&
           checkinDate.getMonth() === today.getMonth() &&
-          checkinDate.getFullYear() === today.getFullYear()
+          checkinDate.getFullYear() === today.getFullYear();
 
         if (mesmoDia) {
           setMensagem(
             `Este credenciado já fez check-in hoje às ${checkinDate.toLocaleTimeString(
-              'pt-BR'
+              "pt-BR"
             )}.`
-          )
-          setLoading(false)
-          return
+          );
+          setLoading(false);
+          return;
         }
       }
 
-      const docRef = doc(db, 'credenciados', credenciado.id)
-      const agora = new Date()
+      const docRef = doc(db, "credenciados", credenciado.id);
+      const agora = new Date();
       await updateDoc(docRef, {
         checkInAt: Timestamp.fromDate(agora),
-      })
+      });
 
-      setMensagem(`Check-in realizado com sucesso para ${credenciado.nome}!`)
+      setMensagem(`Check-in realizado com sucesso para ${credenciado.nome}!`);
 
       setDados((prev) =>
         prev.map((d) =>
-          d.id === credenciado.id
-            ? { ...d, checkInAt: agora.toISOString() }
-            : d
+          d.id === credenciado.id ? { ...d, checkInAt: agora.toISOString() } : d
         )
-      )
+      );
 
-      setModalCheckIn(null)
+      setModalCheckIn(null);
     } catch (error) {
-      console.error(error)
-      setMensagem('Erro ao registrar check-in. Tente novamente.')
+      console.error(error);
+      setMensagem("Erro ao registrar check-in. Tente novamente.");
     }
-    setLoading(false)
+    setLoading(false);
   }
 
   return (
@@ -258,7 +256,7 @@ export default function CredenciadosPage() {
         />
 
         <Select value={filtroEmpresa} onValueChange={setFiltroEmpresa}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="cursor-pointer w-[200px]">
             <SelectValue placeholder="Todas as empresas" />
           </SelectTrigger>
           <SelectContent>
@@ -275,7 +273,7 @@ export default function CredenciadosPage() {
           value={String(itensPorPagina)}
           onValueChange={(value) => setItensPorPagina(Number(value))}
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="cursor-pointer w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -289,9 +287,9 @@ export default function CredenciadosPage() {
 
         <Select
           value={ordenacao}
-          onValueChange={(value) => setOrdenacao(value as 'asc' | 'desc')}
+          onValueChange={(value) => setOrdenacao(value as "asc" | "desc")}
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="cursor-pointer w-[150px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -302,9 +300,8 @@ export default function CredenciadosPage() {
       </div>
 
       <div className="flex justify-end mb-4">
-  <Button onClick={exportarExcel}>Exportar Excel</Button>
-</div>
-
+        <Button className="cursor-pointer" onClick={exportarExcel}>Exportar Excel</Button>
+      </div>
 
       {/* {mensagem && (
         <div className="mb-4 p-2 bg-blue-100 text-blue-800 rounded">
@@ -351,7 +348,7 @@ export default function CredenciadosPage() {
                 </p>
                 {item.dataCredenciamento ? (
                   <p>
-                    <strong>Data Credenciamento:</strong>{' '}
+                    <strong>Data Credenciamento:</strong>{" "}
                     {new Date(item.dataCredenciamento).toLocaleDateString()}
                   </p>
                 ) : (
@@ -361,7 +358,7 @@ export default function CredenciadosPage() {
                 )}
                 {item.checkInAt ? (
                   <p>
-                    <strong>Check-in:</strong>{' '}
+                    <strong>Check-in:</strong>{" "}
                     {new Date(item.checkInAt).toLocaleString()}
                   </p>
                 ) : (
@@ -371,25 +368,24 @@ export default function CredenciadosPage() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button
+                <Button className="cursor-pointer"
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    setSelecionado(item)
-                    setTimeout(() => handlePrint(), 100)
+                    setSelecionado(item);
+                    setTimeout(() => handlePrint(), 100);
                   }}
                 >
                   <Printer className="h-5 w-5" />
                 </Button>
-                <Button
-  onClick={() => {
-    setMensagem(null) // limpa mensagem anterior
-    setModalCheckIn(item)
-  }}
->
-  Check-in
-</Button>
-
+                <Button className="cursor-pointer"
+                  onClick={() => {
+                    setMensagem(null); // limpa mensagem anterior
+                    setModalCheckIn(item);
+                  }}
+                >
+                  Check-in
+                </Button>
               </div>
             </Card>
           ))}
@@ -420,7 +416,7 @@ export default function CredenciadosPage() {
       )}
 
       {/* impressão escondida */}
-      <div style={{ display: 'none' }}>
+      <div style={{ display: "none" }}>
         <div ref={printRef}>
           {selecionado && (
             <CredencialPrint
@@ -434,49 +430,59 @@ export default function CredenciadosPage() {
 
       {/* modal check-in */}
       <Dialog
-  open={!!modalCheckIn}
-  onOpenChange={(open) => {
-    if (!open) {
-      setModalCheckIn(null)
-      setMensagem(null)
-      fetchCredenciados(setDados) // recarrega apenas os dados
-    }
-  }}
->
-
+        open={!!modalCheckIn}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalCheckIn(null);
+            setMensagem(null);
+            fetchCredenciados(setDados); // recarrega apenas os dados
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar Check-in</DialogTitle>
           </DialogHeader>
           {/* Modal de Check-in */}
-<Dialog open={!!modalCheckIn} onOpenChange={() => setModalCheckIn(null)}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Check-in de {modalCheckIn?.nome}</DialogTitle>
-    </DialogHeader>
-    {modalCheckIn && (
-      <div className="space-y-3">
-        <p><strong>CPF:</strong> {modalCheckIn.cpf}</p>
-        <p><strong>Email:</strong> {modalCheckIn.email}</p>
-        <p><strong>Empresa:</strong> {modalCheckIn.empresa}</p>
-        <p><strong>Telefone:</strong> {modalCheckIn.telefone}</p>
-        <Button
-          onClick={() => fazerCheckIn(modalCheckIn)}
-          disabled={loading}
-        >
-          {loading ? 'Registrando...' : 'Confirmar Check-in'}
-        </Button>
-        {mensagem && (
-          <p className="text-center text-green-600 mt-2">{mensagem}</p>
-        )}
-      </div>
-    )}
-  </DialogContent>
-</Dialog>
-
+          <Dialog
+            open={!!modalCheckIn}
+            onOpenChange={() => setModalCheckIn(null)}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Check-in de {modalCheckIn?.nome}</DialogTitle>
+              </DialogHeader>
+              {modalCheckIn && (
+                <div className="space-y-3">
+                  <p>
+                    <strong>CPF:</strong> {modalCheckIn.cpf}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {modalCheckIn.email}
+                  </p>
+                  <p>
+                    <strong>Empresa:</strong> {modalCheckIn.empresa}
+                  </p>
+                  <p>
+                    <strong>Telefone:</strong> {modalCheckIn.telefone}
+                  </p>
+                  <Button className="cursor-pointer"
+                    onClick={() => fazerCheckIn(modalCheckIn)}
+                    disabled={loading}
+                  >
+                    {loading ? "Registrando..." : "Confirmar Check-in"}
+                  </Button>
+                  {mensagem && (
+                    <p className="text-center text-green-600 mt-2">
+                      {mensagem}
+                    </p>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
-

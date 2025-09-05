@@ -58,7 +58,7 @@ export default function CredenciamentoPage() {
   };
 
   return (
-    <div className="relative max-w-sm mx-auto p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-md mt-10">
+    <div className="relative max-w-sm mx-auto p-6 shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow mt-10">
       <h1 className="text-2xl font-bold mb-4 text-center text-zinc-900 dark:text-zinc-100">
         Credenciamento
       </h1>
@@ -79,7 +79,7 @@ export default function CredenciamentoPage() {
           ).map((opt) => (
             <label
               key={opt.value}
-              className="inline-flex items-center gap-2 text-zinc-800 dark:text-zinc-100"
+              className="cursor-pointer inline-flex items-center gap-2 text-zinc-800 dark:text-zinc-100"
             >
               <input
                 type="radio"
@@ -175,7 +175,7 @@ export default function CredenciamentoPage() {
           <p className="text-red-500 text-sm">Telefone é obrigatório</p>
         )}
 
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="cursor-pointer w-full">
           Enviar
         </Button>
 
