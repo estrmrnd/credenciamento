@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { useClickOutside } from '../hooks/useClickOutside'
 
+
 type SuggestInputProps = {
   registerReturn: UseFormRegisterReturn
   value: string
