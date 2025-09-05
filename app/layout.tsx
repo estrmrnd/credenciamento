@@ -11,7 +11,6 @@ export const metadata: Metadata = {
   title: "Credenciamento",
   description: "Sistema de login com tema escuro",
 };
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
