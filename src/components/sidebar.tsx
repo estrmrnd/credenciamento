@@ -30,24 +30,24 @@ export function DropdownMenuCheckboxes() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">Menu</Button>
+        <Button className="cursor-pointer" variant="outline">Menu</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <DropdownMenuItem asChild>
-          <Link href="/auth/admin">Admin</Link>
+          <Link className="cursor-pointer" href="/auth/admin">Admin</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/auth/credenciamento">Credenciamento</Link>
+          <Link className="cursor-pointer" href="/auth/credenciamento">Credenciamento</Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/auth/credenciados">Credenciados</Link>
+          <Link className="cursor-pointer" href="/auth/credenciados">Credenciados</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        {/* <DropdownMenuItem asChild>
           <Link href="/auth/checkin">Check In</Link>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
           Sair
         </DropdownMenuItem>
       </DropdownMenuContent>

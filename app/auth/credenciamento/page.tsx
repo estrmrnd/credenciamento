@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { Button } from '@/components/ui/button'
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { Input } from '../../temaEscuro/input'
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Input } from "../../temaEscuro/input";
 
-import { SuggestInput } from './components/SuggestInput'
-import { useDistinctValues } from './hooks/useDistinctValues'
-import { salvarCredenciado } from './services/salvar'
-import type { Credenciado, TipoPessoa } from './types'
+import { SuggestInput } from "./components/SuggestInput";
+import { useDistinctValues } from "./hooks/useDistinctValues";
+import { salvarCredenciado } from "./services/salvar";
+import type { Credenciado, TipoPessoa } from "./types";
 
 export default function CredenciamentoPage() {
   const {
@@ -20,21 +20,21 @@ export default function CredenciamentoPage() {
     formState: { errors },
   } = useForm<Credenciado>({
     defaultValues: {
-      tipoPessoa: 'pessoaFisica',
-      empresa: '',
+      tipoPessoa: "pessoaFisica",
+      empresa: "",
     },
-  })
+  });
 
-  const [mensagem, setMensagem] = useState<string | null>(null)
+  const [mensagem, setMensagem] = useState<string | null>(null);
 
   // Campos observados
-  const tipoPessoa = watch('tipoPessoa')
-  const nomeAtual = watch('nome') || ''
-  const empresaAtual = watch('empresa') || ''
+  const tipoPessoa = watch("tipoPessoa");
+  const nomeAtual = watch("nome") || "";
+  const empresaAtual = watch("empresa") || "";
 
   // Sugestões do Firestore (escopo da feature)
-  const nomes = useDistinctValues('credenciados', 'nome')
-  const empresas = useDistinctValues('credenciados', 'empresa')
+  const nomes = useDistinctValues("credenciados", "nome");
+  const empresas = useDistinctValues("credenciados", "empresa");
 
   const onSubmit = async (data: Credenciado) => {
     try {
@@ -43,92 +43,141 @@ export default function CredenciamentoPage() {
         nome: data.nome.trim(),
         email: data.email.trim(),
         cpf: data.cpf.trim(),
-        empresa: (data.empresa || '').trim(),
+        empresa: (data.empresa || "").trim(),
+        tipoPessoa: data.tipoPessoa.trim() as TipoPessoa,
+        funcao: (data.funcao || "").trim(),
+        observacao: (data.observacao || "").trim(),
         telefone: data.telefone.trim(),
-      })
-      setMensagem('Credenciamento realizado com sucesso!')
-      reset({ tipoPessoa: data.tipoPessoa, empresa: '' })
+      });
+      setMensagem("Credenciamento realizado com sucesso!");
+      reset({ tipoPessoa: data.tipoPessoa, empresa: "" });
     } catch (e) {
-      console.error(e)
-      setMensagem('Erro ao credenciar. Tente novamente.')
+      console.error(e);
+      setMensagem("Erro ao credenciar. Tente novamente.");
     }
-  }
+  };
 
   return (
-    <div className="relative max-w-sm mx-auto p-6 bg-white dark:bg-zinc-900 rounded-xl shadow-md mt-10">
+    <div className="relative max-w-sm mx-auto p-6 shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow mt-10">
       <h1 className="text-2xl font-bold mb-4 text-center text-zinc-900 dark:text-zinc-100">
         Credenciamento
       </h1>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
-
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-4"
+        autoComplete="off"
+      >
+        {/* Tipo Pessoa */}
         <div className="flex flex-row gap-2 mb-4 text-sm">
-          {([
-            { value: 'pessoaFisica', label: 'Pessoa Física' },
-            { value: 'empresa', label: 'Empresa' },
-            { value: 'colaborador', label: 'Sou colaborador' },
-          ] as { value: TipoPessoa; label: string }[]).map((opt) => (
-            <label key={opt.value} className="inline-flex items-center gap-2 text-zinc-800 dark:text-zinc-100">
-              <input type="radio" value={opt.value} {...register('tipoPessoa', { required: true })} />
+          {(
+            [
+              { value: "pessoaFisica", label: "Pessoa Física" },
+              { value: "empresa", label: "Empresa" },
+              { value: "colaborador", label: "Sou colaborador" },
+            ] as { value: TipoPessoa; label: string }[]
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className="cursor-pointer inline-flex items-center gap-2 text-zinc-800 dark:text-zinc-100"
+            >
+              <input
+                type="radio"
+                value={opt.value}
+                {...register("tipoPessoa", { required: true })}
+              />
               {opt.label}
             </label>
           ))}
         </div>
-        {errors.tipoPessoa && <p className="text-red-500 text-sm">Escolha uma opção</p>}
+        {errors.tipoPessoa && (
+          <p className="text-red-500 text-sm">Escolha uma opção</p>
+        )}
 
         <SuggestInput
-          registerReturn={register('nome', {
+          registerReturn={register("nome", {
             required: true,
-            setValueAs: (v) => (typeof v === 'string' ? v.trim() : v),
+            setValueAs: (v) => (typeof v === "string" ? v.trim() : v),
           })}
           value={nomeAtual}
           suggestions={nomes}
-          placeholder={tipoPessoa === 'empresa' ? 'Razão Social' : 'Nome Completo'}
-          onSelect={(val) => setValue('nome', val, { shouldValidate: true })}
-          error={errors.nome && 'Nome é obrigatório'}
+          placeholder={
+            tipoPessoa === "empresa" ? "Razão Social" : "Nome Completo"
+          }
+          onSelect={(val) => setValue("nome", val, { shouldValidate: true })}
+          error={errors.nome && "Nome é obrigatório"}
         />
 
         <Input
           type="email"
           placeholder="E-mail"
-          {...register('email', { required: true })}
+          {...register("email", { required: true })}
           className="w-full"
         />
-        {errors.email && <p className="text-red-500 text-sm">E-mail é obrigatório</p>}
+        {errors.email && (
+          <p className="text-red-500 text-sm">E-mail é obrigatório</p>
+        )}
 
         <Input
           type="text"
-          placeholder={tipoPessoa === 'empresa' ? 'CNPJ' : 'CPF'}
-          {...register('cpf', { required: true })}
+          placeholder={tipoPessoa === "empresa" ? "CNPJ" : "CPF"}
+          {...register("cpf", { required: true })}
           className="w-full"
         />
-        {errors.cpf && <p className="text-red-500 text-sm">CPF ou CNPJ é obrigatório</p>}
+        {errors.cpf && (
+          <p className="text-red-500 text-sm">CPF ou CNPJ é obrigatório</p>
+        )}
 
-        {(tipoPessoa === 'empresa' || tipoPessoa === 'colaborador') && (
+        {/* Empresa (empresa/colaborador) */}
+        {(tipoPessoa === "empresa" || tipoPessoa === "colaborador") && (
           <SuggestInput
-            registerReturn={register('empresa', {
+            registerReturn={register("empresa", {
               required: true,
-              setValueAs: (v) => (typeof v === 'string' ? v.trim() : v),
+              setValueAs: (v) => (typeof v === "string" ? v.trim() : v),
             })}
             value={empresaAtual}
             suggestions={empresas}
             placeholder="Empresa"
-            onSelect={(val) => setValue('empresa', val, { shouldValidate: true })}
-            error={errors.empresa && 'Empresa é obrigatória'}
+            onSelect={(val) =>
+              setValue("empresa", val, { shouldValidate: true })
+            }
+            error={errors.empresa && "Empresa é obrigatória"}
           />
         )}
 
         <Input
-          placeholder="Telefone com DDD"
-          {...register('telefone', { required: true })}
+          placeholder="Função"
+          {...register("funcao")}
           className="w-full"
         />
-        {errors.telefone && <p className="text-red-500 text-sm">Telefone é obrigatório</p>}
+        {errors.funcao && (
+          <p className="text-red-500 text-sm">Função é obrigatória</p>
+        )}
 
-        <Button type="submit" className="w-full">Enviar</Button>
+        <Input
+          placeholder="Observações..."
+          {...register("observacao")}
+          className="w-full"
+        />
+        {errors.observacao && (
+          <p className="text-red-500 text-sm">Observação é obrigatória</p>
+        )}
+
+        <Input
+          placeholder="Telefone"
+          {...register("telefone", { required: true })}
+          className="w-full"
+        />
+        {errors.telefone && (
+          <p className="text-red-500 text-sm">Telefone é obrigatório</p>
+        )}
+
+        <Button type="submit" className="cursor-pointer w-full">
+          Enviar
+        </Button>
 
         {mensagem && <p className="mt-2 text-green-600">{mensagem}</p>}
       </form>
     </div>
-  )
+  );
 }

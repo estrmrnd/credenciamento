@@ -3,13 +3,15 @@ import React from "react";
 interface Props {
   nome: string;
   empresa: string;
+  funcao: string;
 }
 
-const credencialPrint: React.FC<Props> = ({ nome, empresa }) => {
+const credencialPrint: React.FC<Props> = ({ nome, empresa, funcao }) => {
   return (
     <div className="credencial">
       <h2>{nome}</h2>
       <p>{empresa}</p>
+      <p>{funcao}</p>
       <style jsx>{`
         @media print {
           @page {
