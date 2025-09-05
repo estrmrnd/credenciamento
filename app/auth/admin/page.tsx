@@ -6,6 +6,7 @@ import Swal from "sweetalert2"
 import { onAuthStateChanged, type User } from "firebase/auth"
 import { doc, getDoc, collection, getDocs, addDoc, updateDoc, serverTimestamp, deleteDoc } from "firebase/firestore"
 import { auth, db } from "../../../lib/firebase"
+import { FirebaseError } from "firebase/app"
 import * as XLSX from "xlsx"
 import { Button } from "@/src/components/ui/button"
 
@@ -215,33 +216,62 @@ async function confirmImport() {
   //   Swal.fire("Erro", "Não foi possível importar os dados", "error")
   // }
 
-    async function handleDelete(id: string) {
-    const result = await Swal.fire({
-      title: "Tem certeza?",
-      text: "Isso irá APAGAR o registro do banco de dados.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sim, apagar",
-      cancelButtonText: "Cancelar",
-    });
-    if (!result.isConfirmed) return;
+  //   async function handleDelete(id: string) {
+  //   const result = await Swal.fire({
+  //     title: "Tem certeza?",
+  //     text: "Isso irá APAGAR o registro do banco de dados.",
+  //     icon: "warning",
+  //     showCancelButton: true,
+  //     confirmButtonText: "Sim, apagar",
+  //     cancelButtonText: "Cancelar",
+  //   });
+  //   if (!result.isConfirmed) return;
 
-    try {
-      setDeletingId(id);
-      await deleteDoc(doc(db, "credenciados", id));
-      setCredenciados((prev) => prev.filter((c) => c.id !== id));
-      Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success");
-    } catch (error: any) {
-      if (error?.code === "permission-denied") {
-        Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning");
-      } else {
-        console.error("Erro ao remover:", error);
-        Swal.fire("Erro", "Não foi possível remover o credenciado", "error");
-      }
-    } finally {
-      setDeletingId(null);
+  //   try {
+  //     setDeletingId(id);
+  //     await deleteDoc(doc(db, "credenciados", id));
+  //     setCredenciados((prev) => prev.filter((c) => c.id !== id));
+  //     Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success");
+  //   } catch (error: any) {
+  //     if (error?.code === "permission-denied") {
+  //       Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning");
+  //     } else {
+  //       console.error("Erro ao remover:", error);
+  //       Swal.fire("Erro", "Não foi possível remover o credenciado", "error");
+  //     }
+  //   } finally {
+  //     setDeletingId(null);
+  //   }
+  // }
+
+  async function handleDelete(id: string) {
+  const result = await Swal.fire({
+    title: "Tem certeza?",
+    text: "Isso irá APAGAR o registro do banco de dados.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sim, apagar",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    setDeletingId(id);
+    await deleteDoc(doc(db, "credenciados", id));
+    setCredenciados((prev) => prev.filter((c) => c.id !== id));
+    Swal.fire("Removido!", "O credenciado foi removido do banco de dados.", "success");
+  } catch (error) {
+    if (error instanceof FirebaseError && error.code === "permission-denied") {
+      Swal.fire("Sem permissão", "Sua conta não tem permissão para remover.", "warning");
+    } else {
+      console.error("Erro ao remover:", error);
+      Swal.fire("Erro", "Não foi possível remover o credenciado", "error");
     }
+  } finally {
+    setDeletingId(null);
   }
+}
 
   // editar credenciado
   function openEditModal(c: Credenciado) {
