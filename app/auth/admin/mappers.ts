@@ -1,5 +1,5 @@
 // app/auth/admin/mappers.ts
-// Sem "any"
+// Sem `any`. Helpers centralizados para reuso em repo.ts / index.ts / importExcel.ts
 
 export type CredenciadoExcel = {
     Nome?: string
@@ -7,7 +7,7 @@ export type CredenciadoExcel = {
     CPF?: string
     Empresa?: string
     Telefone?: string
-    TipoPessoa?: string // "F" | "J" | variações ("PF","PJ","Física","Jurídica")
+    TipoPessoa?: string // livre no Excel: "F", "J", "PF", "Física", etc.
     funcao?: string
     observacao?: string
 }
@@ -24,6 +24,19 @@ export type Credenciado = {
     observacao?: string
 }
 
+/** Payload “limpo” para Firestore (sem undefined). */
+export type CredenciadoFirestore = {
+    nome: string
+    email: string | null
+    cpf: string | null
+    empresa: string | null
+    telefone: string | null
+    tipoPessoa: "F" | "J"
+    funcao: string | null
+    observacao: string | null
+}
+
+
 /* ───────────────────────────── helpers ───────────────────────────── */
 
 export function toStr(v: unknown): string | undefined {
@@ -39,21 +52,22 @@ export function nonEmpty(s?: string): boolean {
     return !!(s && s.trim().length > 0)
 }
 
-function normalizeDigits(v: unknown): string | undefined {
-    const s = toStr(v)
-    if (!s) return undefined
-    const d = s.replace(/\D+/g, "")
+function digits(v?: string): string | undefined {
+    if (!v) return undefined
+    const d = v.replace(/\D+/g, "")
     return d.length ? d : undefined
 }
 
 export function normalizeCPF(v: unknown): string | undefined {
-    const d = normalizeDigits(v)
-    // Aceita 11 dígitos; se quiser validar DV, faça aqui.
-    return d && d.length === 11 ? d : d
+    const s = toStr(v)
+    const d = digits(s)
+    // Se quiser validar DV, faça aqui; por ora apenas retorna dígitos se existirem
+    return d
 }
 
 export function normalizeTelefone(v: unknown): string | undefined {
-    return normalizeDigits(v)
+    const s = toStr(v)
+    return digits(s)
 }
 
 export function normalizeTipoPessoa(v: unknown): "F" | "J" | undefined {
@@ -64,43 +78,50 @@ export function normalizeTipoPessoa(v: unknown): "F" | "J" | undefined {
     return undefined
 }
 
-/* ───────────────────────────── payload builders ───────────────────────────── */
+/* ─────────────────────── builders para Firestore ─────────────────────── */
 
 /**
- * Constrói o payload para o Firestore a partir de um Credenciado completo
- * (ignora `id`).
+ * Constrói payload SEM undefined (usa null nos opcionais).
+ * Garante `tipoPessoa` sempre "F" ou "J".
  */
-export function makeCredPayload(c: Credenciado): Omit<Credenciado, "id"> {
+export function makeCredPayload(c: Credenciado): CredenciadoFirestore {
     return {
         nome: toStr(c.nome) ?? "",
-        email: toStr(c.email) ?? "",
-        cpf: normalizeCPF(c.cpf),
-        empresa: toStr(c.empresa),
-        telefone: normalizeTelefone(c.telefone),
+        // antes: email: toStr(c.email) ?? ""
+        // agora: se vier vazio/ausente, manda null (ou seja, não-vazio só quando realmente há valor)
+        email: toStr(c.email) ?? null,
+        cpf: normalizeCPF(c.cpf) ?? null,
+        empresa: toStr(c.empresa) ?? null,
+        telefone: normalizeTelefone(c.telefone) ?? null,
         tipoPessoa: normalizeTipoPessoa(c.tipoPessoa) ?? "F",
-        funcao: toStr(c.funcao),
-        observacao: toStr(c.observacao),
+        funcao: toStr(c.funcao) ?? null,
+        observacao: toStr(c.observacao) ?? null,
     }
 }
 
+
 /**
- * Monta um objeto de atualização parcial sem campos `undefined`.
- * Útil para `updateDoc`.
+ * Atualização parcial SEM undefined (usa null quando necessário).
+ * Retorna somente campos presentes no patch.
  */
 export function makePartialUpdate(
     patch: Partial<Omit<Credenciado, "id">>
-): Partial<Omit<Credenciado, "id">> {
-    const out: Partial<Omit<Credenciado, "id">> = {}
+): Partial<CredenciadoFirestore> {
+    const out: Partial<CredenciadoFirestore> = {}
 
     if (patch.nome !== undefined) out.nome = toStr(patch.nome) ?? ""
-    if (patch.email !== undefined) out.email = toStr(patch.email) ?? ""
-    if (patch.cpf !== undefined) out.cpf = normalizeCPF(patch.cpf)
-    if (patch.empresa !== undefined) out.empresa = toStr(patch.empresa)
-    if (patch.telefone !== undefined) out.telefone = normalizeTelefone(patch.telefone)
+    // antes: out.email = toStr(patch.email) ?? ""
+    // agora:
+    if (patch.email !== undefined) out.email = toStr(patch.email) ?? null
+
+    if (patch.cpf !== undefined) out.cpf = normalizeCPF(patch.cpf) ?? null
+    if (patch.empresa !== undefined) out.empresa = toStr(patch.empresa) ?? null
+    if (patch.telefone !== undefined) out.telefone = normalizeTelefone(patch.telefone) ?? null
     if (patch.tipoPessoa !== undefined)
         out.tipoPessoa = normalizeTipoPessoa(patch.tipoPessoa) ?? "F"
-    if (patch.funcao !== undefined) out.funcao = toStr(patch.funcao)
-    if (patch.observacao !== undefined) out.observacao = toStr(patch.observacao)
+    if (patch.funcao !== undefined) out.funcao = toStr(patch.funcao) ?? null
+    if (patch.observacao !== undefined) out.observacao = toStr(patch.observacao) ?? null
 
     return out
 }
+

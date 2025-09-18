@@ -1,4 +1,4 @@
-
+// app/auth/admin/repo.ts
 import {
     collection,
     getDocs,
@@ -8,9 +8,10 @@ import {
     doc,
     writeBatch,
 } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import { db } from "../../../lib/firebase"
 import {
     Credenciado,
+    CredenciadoFirestore,
     makeCredPayload,
     makePartialUpdate,
     toStr,
@@ -25,25 +26,24 @@ const colRef = collection(db, "credenciados")
 export async function listCredenciados(): Promise<Credenciado[]> {
     const qs = await getDocs(colRef)
     return qs.docs.map((d) => {
-        // d.data() é DocumentData; projetamos com "unknown" -> helpers tipados
-        const data = d.data() as Partial<Credenciado>
+        // Firestore retorna DocumentData; projetamos de forma segura
+        const data = d.data() as Partial<CredenciadoFirestore>
         return {
             id: d.id,
             nome: (toStr(data.nome) ?? "Sem nome") as string,
             email: (toStr(data.email) ?? "Sem email") as string,
-            cpf: toStr(data.cpf),
-            telefone: toStr(data.telefone),
-            // 👇 importante: normaliza para "F" | "J" | undefined (não string solta)
-            tipoPessoa: normalizeTipoPessoa(data.tipoPessoa),
-            empresa: toStr(data.empresa),
-            funcao: toStr(data.funcao) ?? "",
-            observacao: toStr(data.observacao) ?? "",
+            cpf: toStr(data.cpf ?? undefined),
+            telefone: toStr(data.telefone ?? undefined),
+            tipoPessoa: normalizeTipoPessoa(data.tipoPessoa) as Credenciado["tipoPessoa"],
+            empresa: toStr(data.empresa ?? undefined),
+            funcao: toStr(data.funcao ?? undefined) ?? "",
+            observacao: toStr(data.observacao ?? undefined) ?? "",
         }
     })
 }
 
 export async function addCredenciado(c: Credenciado): Promise<void> {
-    const payload = makeCredPayload(c)
+    const payload = makeCredPayload(c) // NUNCA tem undefined
     await addDoc(colRef, payload)
 }
 
@@ -55,7 +55,8 @@ export async function addCredenciadosBulk(items: Credenciado[]): Promise<void> {
         const slice = items.slice(i, i + chunkSize)
         slice.forEach((c) => {
             const ref = doc(colRef) // id auto
-            batch.set(ref, makeCredPayload(c))
+            const payload = makeCredPayload(c) // NUNCA envia undefined
+            batch.set(ref, payload)
         })
         await batch.commit()
     }
@@ -66,7 +67,7 @@ export async function updateCredenciado(
     patch: Partial<Omit<Credenciado, "id">>
 ): Promise<void> {
     const ref = doc(db, "credenciados", id)
-    const body = makePartialUpdate(patch)
+    const body = makePartialUpdate(patch) // sem undefined
     await updateDoc(ref, body)
 }
 
