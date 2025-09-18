@@ -1,5 +1,6 @@
 'use client'
 
+import { auth, db } from "@/lib/firebase"
 import { Button } from "@/src/components/ui/button"
 import { FirebaseError } from "firebase/app"
 import { onAuthStateChanged, type User } from "firebase/auth"
@@ -7,7 +8,6 @@ import { doc, getDoc } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import Swal from "sweetalert2"
-import { auth, db } from "../../../lib/firebase"
 
 import {
   addCredenciadosBulk,
