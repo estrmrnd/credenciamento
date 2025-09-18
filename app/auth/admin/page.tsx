@@ -23,6 +23,7 @@ type CredenciadoExcel = {
   Nome?: string
   Email?: string
   CPF?: string
+  Empresa?: string
   Telefone?: string
   TipoPessoa?: string
   funcao?: string
@@ -34,6 +35,7 @@ type Credenciado = {
   nome: string
   email: string
   cpf?: string
+  empresa?: string
   telefone?: string
   tipoPessoa?: string
   funcao?: string
@@ -146,6 +148,7 @@ export default function AdminPage() {
           cpf: data.cpf,
           telefone: data.telefone,
           tipoPessoa: data.tipoPessoa,
+          empresa: data.empresa,
           funcao: data.funcao || "",
           observacao: data.observacao || ""
         }
@@ -170,6 +173,7 @@ export default function AdminPage() {
       CPF: c.cpf || "",
       Telefone: c.telefone || "",
       TipoPessoa: c.tipoPessoa || "",
+      Empresa: c.empresa || "",
       funcao: c.funcao || "",
       observacao: c.observacao || ""
     }))
@@ -198,6 +202,7 @@ export default function AdminPage() {
           nome: item.Nome ?? "",
           email: item.Email ?? "",
           cpf: item.CPF ?? "",
+          empresa: item.Empresa ?? "",
           telefone: item.Telefone ?? "",
           tipoPessoa: item.TipoPessoa ?? "pessoaFisica",
           funcao: item.funcao ?? "",
@@ -223,6 +228,7 @@ export default function AdminPage() {
           nome: item.nome,
           email: item.email,
           cpf: item.cpf,
+          empresa: item.empresa,
           telefone: item.telefone,
           tipoPessoa: item.tipoPessoa,
           funcao: item.funcao,
@@ -344,6 +350,9 @@ export default function AdminPage() {
                 <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">CPF</th>
                 <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">Telefone</th>
                 <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">TipoPessoa</th>
+                <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">Empresa</th>
+                <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">Função</th>
+                <th className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-left">OBS</th>
               </tr>
             </thead>
             <tbody>
@@ -354,6 +363,9 @@ export default function AdminPage() {
                   <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.cpf}</td>
                   <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.telefone}</td>
                   <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.tipoPessoa}</td>
+                  <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.empresa}</td>
+                  <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.funcao}</td>
+                  <td className="px-4 py-2 border border-gray-300 dark:border-gray-700">{c.observacao}</td>
                 </tr>
               ))}
             </tbody>
@@ -450,6 +462,13 @@ export default function AdminPage() {
               placeholder="CPF"
               value={editingCredenciado.cpf || ""}
               onChange={(e) => handleEditChange("cpf", e.target.value)}
+            />
+            <input
+              type="text"
+              className="border border-gray-300 dark:border-gray-600 p-2 w-full mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded"
+              placeholder="CPF"
+              value={editingCredenciado.empresa || ""}
+              onChange={(e) => handleEditChange("empresa", e.target.value)}
             />
             <input
               type="text"
