@@ -1,5 +1,5 @@
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore"
-import { db } from "@/src/lib/firebase"
+import { db } from "@/lib/firebase"
 import { Credenciado, makeCredPayload, makePartialUpdate, toStr } from "./mappers"
 
 const colRef = collection(db, "credenciados")

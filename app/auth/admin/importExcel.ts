@@ -1,5 +1,14 @@
+// app/auth/admin/importExcel.ts
 import * as XLSX from "xlsx"
-import { Credenciado, CredenciadoExcel, nonEmpty, toStr } from "./mappers"
+import {
+    Credenciado,
+    CredenciadoExcel,
+    nonEmpty,
+    toStr,
+    normalizeCPF,
+    normalizeTelefone,
+    normalizeTipoPessoa,
+} from "./mappers"
 
 /** Lê o Excel e devolve array normalizado para pré-visualização */
 export async function parseExcelToPreview(file: File): Promise<Credenciado[]> {
@@ -7,19 +16,32 @@ export async function parseExcelToPreview(file: File): Promise<Credenciado[]> {
     const workbook = XLSX.read(data)
     const sheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[sheetName]
-    const rows: CredenciadoExcel[] = XLSX.utils.sheet_to_json<CredenciadoExcel>(worksheet)
+    const rows = XLSX.utils.sheet_to_json<CredenciadoExcel>(worksheet, {
+        defval: "", // evita undefined nos campos do Excel
+    })
 
     return rows
-        .map((r) => ({
-            id: "",
-            nome: toStr(r.Nome) || "",
-            email: toStr(r.Email) || "",
-            cpf: toStr(r.CPF),
-            empresa: toStr(r.Empresa),
-            telefone: toStr(r.Telefone),
-            tipoPessoa: toStr(r.TipoPessoa) || "pessoaFisica",
-            funcao: toStr(r.funcao),
-            observacao: toStr(r.observacao),
-        }))
+        .map<Credenciado>((r, idx) => {
+            const nome = toStr(r.Nome) ?? ""
+            const email = toStr(r.Email) ?? ""
+            const cpf = normalizeCPF(r.CPF)
+            const empresa = toStr(r.Empresa)
+            const telefone = normalizeTelefone(r.Telefone)
+            const tipoPessoa = normalizeTipoPessoa(r.TipoPessoa) ?? "F"
+            const funcao = toStr(r.funcao)
+            const observacao = toStr(r.observacao)
+
+            return {
+                id: `preview-${idx}`, // marcador temporário para preview
+                nome,
+                email,
+                cpf,
+                empresa,
+                telefone,
+                tipoPessoa,
+                funcao,
+                observacao,
+            }
+        })
         .filter((i) => nonEmpty(i.nome) && nonEmpty(i.email))
 }
