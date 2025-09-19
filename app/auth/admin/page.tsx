@@ -20,6 +20,7 @@ import {
 } from "./"
 
 type Order = "asc" | "desc"
+type TipoPessoaFiltro = "all" | "F" | "J"
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
@@ -36,7 +37,7 @@ export default function AdminPage() {
 
   // Filtro/ordenação/paginação
   const [filtroTexto, setFiltroTexto] = useState("")
-  const [filtroTipo, setFiltroTipo] = useState<"all" | string>("all")
+  const [filtroTipo, setFiltroTipo] = useState<TipoPessoaFiltro>("all")
   const [ordenacao, setOrdenacao] = useState<Order>("asc")
   const [itensPorPagina, setItensPorPagina] = useState(10)
   const [paginaAtual, setPaginaAtual] = useState(1)
@@ -191,15 +192,23 @@ export default function AdminPage() {
   }
 
   function openEditModal(c: Credenciado) { setEditingCredenciado(c) }
-  function handleEditChange(field: keyof Credenciado, value: string) {
+
+  function handleEditChange(field: Exclude<keyof Credenciado, "tipoPessoa">, value: string) {
     if (!editingCredenciado) return
     setEditingCredenciado({ ...editingCredenciado, [field]: value })
   }
+
+  function handleEditTipoPessoa(value: "F" | "J") {
+    if (!editingCredenciado) return
+    setEditingCredenciado({ ...editingCredenciado, tipoPessoa: value })
+  }
+
   async function saveEdit() {
     if (!editingCredenciado) return
     const { id, ...data } = editingCredenciado
     try {
       setSavingEdit(true)
+      // Pode enviar patch de domínio; o index.ts converte para Firestore-safe
       await updateCredenciado(id, makePartialUpdate(data))
       Swal.fire("Sucesso", "Credenciado atualizado com sucesso!", "success")
       setEditingCredenciado(null)
@@ -227,6 +236,36 @@ export default function AdminPage() {
           value={filtroTexto}
           onChange={(e) => setFiltroTexto(e.target.value)}
         />
+
+        {/* filtro por tipo coerente com "F" | "J" */}
+        <select
+          className="p-2 border rounded dark:bg-gray-800 dark:text-white"
+          value={filtroTipo}
+          onChange={(e) => setFiltroTipo(e.target.value as TipoPessoaFiltro)}
+        >
+          <option value="all">Todos</option>
+          <option value="F">Pessoa Física</option>
+          <option value="J">Pessoa Jurídica</option>
+        </select>
+
+        <select
+          className="p-2 border rounded dark:bg-gray-800 dark:text-white"
+          value={ordenacao}
+          onChange={(e) => setOrdenacao(e.target.value as Order)}
+        >
+          <option value="asc">A–Z</option>
+          <option value="desc">Z–A</option>
+        </select>
+
+        <select
+          className="p-2 border rounded dark:bg-gray-800 dark:text-white"
+          value={itensPorPagina}
+          onChange={(e) => setItensPorPagina(Number(e.target.value))}
+        >
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -346,13 +385,15 @@ export default function AdminPage() {
             <input className="border p-2 w-full mb-2" placeholder="Telefone"
                    value={editingCredenciado.telefone || ""}
                    onChange={(e) => handleEditChange("telefone", e.target.value)} />
+
+            {/* Agora coerente com "F" | "J" */}
             <select className="border p-2 w-full mb-2"
-                    value={editingCredenciado.tipoPessoa || "pessoaFisica"}
-                    onChange={(e) => handleEditChange("tipoPessoa", e.target.value)}>
-              <option value="pessoaFisica">Pessoa Física</option>
-              <option value="empresa">Empresa</option>
-              <option value="colaborador">Colaborador</option>
+                    value={editingCredenciado.tipoPessoa ?? "F"}
+                    onChange={(e) => handleEditTipoPessoa(e.target.value as "F" | "J")}>
+              <option value="F">Pessoa Física</option>
+              <option value="J">Pessoa Jurídica</option>
             </select>
+
             <input className="border p-2 w-full mb-2" placeholder="Função"
                    value={editingCredenciado.funcao || ""}
                    onChange={(e) => handleEditChange("funcao", e.target.value)} />
