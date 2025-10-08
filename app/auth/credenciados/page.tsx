@@ -23,7 +23,7 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore"
-import { Printer } from "lucide-react"
+import { Check, Printer, User } from "lucide-react"
 import router from "next/router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useReactToPrint } from "react-to-print"
@@ -90,6 +90,15 @@ export default function CredenciadosPage() {
     XLSX.writeFile(workbook, "credenciados.xlsx");
   }
 
+  // dentro do componente CredenciadosPage, logo após dadosOrdenados
+  const totalCredenciados = useMemo(() => dados.length, [dados]);
+
+  const totalCheckIns = useMemo(
+    () => dados.filter((c) => c.checkInAt).length,
+    [dados]
+  );
+
+
   async function fetchCredenciados(
     setDados: React.Dispatch<React.SetStateAction<Credenciado[]>>
   ) {
@@ -145,11 +154,16 @@ export default function CredenciadosPage() {
   }, []);
 
   const empresasUnicas = useMemo(() => {
-    const setEmpresas = new Set<string>();
+    const mapEmpresas = new Map<string, string>();
     dados.forEach((item) => {
-      if (item.empresa) setEmpresas.add(item.empresa);
+      if (item.empresa) {
+        const key = item.empresa.trim().toLowerCase(); // chave normalizada
+        if (!mapEmpresas.has(key)) {
+          mapEmpresas.set(key, item.empresa); // mantém a forma original para exibição
+        }
+      }
     });
-    return Array.from(setEmpresas).sort();
+    return Array.from(mapEmpresas.values()).sort();
   }, [dados]);
 
   const dadosFiltrados = useMemo(() => {
@@ -245,6 +259,34 @@ export default function CredenciadosPage() {
   return (
     <div className="max-w-5xl mx-auto mt-10 mb-[5vh] px-4">
       <h1 className="text-3xl font-bold mb-6">Lista de Credenciados</h1>
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+  {/* Total de credenciados */}
+  <div className="flex-1 p-4 bg-blue-100 dark:bg-blue-800 rounded-lg shadow flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <User className="h-6 w-6 text-blue-800 dark:text-blue-200" />
+      <span className="font-semibold text-blue-800 dark:text-blue-200">
+        Total de credenciados
+      </span>
+    </div>
+    <span className="text-2xl font-bold text-blue-900 dark:text-blue-50">
+      {totalCredenciados}
+    </span>
+  </div>
+
+  {/* Check-ins realizados */}
+  <div className="flex-1 p-4 bg-green-100 dark:bg-green-800 rounded-lg shadow flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <Check className="h-6 w-6 text-green-800 dark:text-green-200" />
+      <span className="font-semibold text-green-800 dark:text-green-200">
+        Check-ins realizados
+      </span>
+    </div>
+    <span className="text-2xl font-bold text-green-900 dark:text-green-50">
+      {totalCheckIns}
+    </span>
+  </div>
+</div>
 
       {/* filtros */}
       <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6 space-y-4 md:space-y-0">

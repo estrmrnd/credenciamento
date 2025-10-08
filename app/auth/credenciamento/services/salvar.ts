@@ -9,5 +9,6 @@ export async function salvarCredenciado(payload: Credenciado) {
         id,
         ...payload,
         createdAt: Timestamp.now(), // se preferir: serverTimestamp()
+        checkInAt: Timestamp.now(), // check-in automático
     })
 }

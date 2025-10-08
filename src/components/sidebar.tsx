@@ -12,11 +12,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { auth } from "../../lib/firebase"
+import { auth, db } from "../../lib/firebase"
 import { signOut } from "firebase/auth"
+import { doc, getDoc } from "firebase/firestore"
+
 
 export function DropdownMenuCheckboxes() {
   const router = useRouter()
+   const [userName, setUserName] = React.useState<string | null>(null)
+
+  // Pega o usuário logado
+React.useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      // busca o nome no Firestore
+      const docRef = doc(db, "users", user.uid)
+      const docSnap = await getDoc(docRef)
+
+      if (docSnap.exists()) {
+        setUserName(docSnap.data().nome as string)
+      } else {
+        // fallback se não tiver no Firestore
+        setUserName(user.email || "Usuário")
+      }
+    } else {
+      setUserName(null)
+    }
+  })
+
+  return () => unsubscribe()
+}, [])
 
   async function handleLogout() {
     try {
@@ -30,7 +55,9 @@ export function DropdownMenuCheckboxes() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="cursor-pointer" variant="outline">Menu</Button>
+        <Button className="cursor-pointer" variant="outline">
+          {userName ? `Olá, ${userName}!` : 'Menu'}
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
         <DropdownMenuItem asChild>

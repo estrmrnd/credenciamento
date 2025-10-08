@@ -93,3 +93,11 @@ export async function updateCredenciado(id: string, patch: any): Promise<void> {
 export async function deleteCredenciado(id: string): Promise<void> {
     await deleteDoc(doc(db, "credenciados", id))
 }
+
+export async function deleteAllCredenciados(): Promise<void> {
+  const snapshot = await getDocs(colRef)
+  const batch = writeBatch(db)
+  snapshot.docs.forEach((docRef) => batch.delete(docRef.ref))
+  await batch.commit()
+}
+

@@ -16,7 +16,8 @@ import {
   listCredenciados,
   makePartialUpdate,
   parseExcelToPreview,
-  updateCredenciado
+  updateCredenciado,
+  deleteAllCredenciados
 } from "./"
 
 type Order = "asc" | "desc"
@@ -224,6 +225,29 @@ export default function AdminPage() {
   if (loading) return <p>Carregando...</p>
   if (!isAdmin) return <p>Acesso negado</p>
 
+async function handleDeleteAll() {
+  const result = await Swal.fire({
+    title: "Tem certeza?",
+    text: "Isso irá APAGAR TODOS os registros do banco de dados.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sim, apagar todos",
+    cancelButtonText: "Cancelar",
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    await deleteAllCredenciados()
+    setCredenciados([]) // limpa a lista local
+    Swal.fire("Removido!", "Todos os credenciados foram removidos.", "success")
+  } catch (error) {
+    console.error("Erro ao remover todos:", error)
+    Swal.fire("Erro", "Não foi possível remover todos os credenciados", "error")
+  }
+}
+
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Painel do Administrador</h1>
@@ -268,7 +292,7 @@ export default function AdminPage() {
         </select>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-6 space-y-4 md:space-y-0">
         <Button onClick={exportarCredenciados}>Exportar Excel</Button>
         {showFileInput && (
           <input
@@ -279,7 +303,13 @@ export default function AdminPage() {
             className="border p-2 rounded cursor-pointer"
           />
         )}
+        <Button variant="destructive" onClick={handleDeleteAll}>
+          Apagar Todos
+        </Button>        
+
       </div>
+
+
 
       {previewData.length > 0 && (
         <div className="overflow-x-auto mb-6">
